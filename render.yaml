@@ -74,18 +74,15 @@ services:
       - key: SWAGGER_ENABLED
         value: "1"
 
-      # --- E-mails transactionnels (Hostinger SMTP) ---
-      # En production, MAIL_DRIVER=log est refuse par la validation Zod :
-      # les 3 variables ci-dessous doivent etre renseignees.
+      # --- E-mails transactionnels ---
+      # Les instances Free de Render ne peuvent PAS emettre sur les ports 25, 465
+      # et 587 (https://render.com/docs/free) : un MAIL_DRIVER=smtp y echoue par
+      # « Connection timeout ». On passe donc par l'API HTTPS d'un fournisseur.
       - key: MAIL_DRIVER
-        value: smtp
-      - key: MAIL_HOST
-        value: smtp.hostinger.com
-      - key: MAIL_PORT
-        value: "465"
-      - key: MAIL_USER
-        sync: false
-      - key: MAIL_PASSWORD
+        value: http
+      - key: MAIL_HTTP_PROVIDER
+        value: brevo
+      - key: MAIL_HTTP_API_KEY
         sync: false
       - key: MAIL_FROM
         sync: false

@@ -34,12 +34,18 @@ const envSchema = z
     APP_WEB_URL: z.url().default('http://localhost:5173'),
     SWAGGER_ENABLED: flag.optional(),
 
-    MAIL_DRIVER: z.enum(['log', 'smtp']).default('log'),
+    // `log` = console (dev), `smtp` = serveur SMTP, `http` = API HTTP (Brevo/Resend).
+    // `http` est le seul pilote utilisable quand l'hébergeur bloque les ports SMTP sortants.
+    MAIL_DRIVER: z.enum(['log', 'smtp', 'http']).default('log'),
     MAIL_HOST: z.string().optional(),
     MAIL_PORT: z.coerce.number().int().min(1).max(65535).optional(),
     MAIL_USER: z.string().optional(),
     MAIL_PASSWORD: z.string().optional(),
     MAIL_FROM: z.string().optional(),
+    MAIL_HTTP_PROVIDER: z.enum(['brevo', 'resend']).optional(),
+    MAIL_HTTP_API_KEY: z.string().optional(),
+    /** Surcharge de l'URL du fournisseur (tests, passerelle interne). */
+    MAIL_HTTP_ENDPOINT: z.url().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
@@ -50,8 +56,20 @@ const envSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['MAIL_DRIVER'],
-        message: "le pilote `log` n'envoie aucun e-mail : interdit en production (utilisez 'smtp')",
+        message: "le pilote `log` n'envoie aucun e-mail : interdit en production (utilisez 'smtp' ou 'http')",
       });
+    }
+    if (env.MAIL_DRIVER === 'http') {
+      const required: Array<'MAIL_HTTP_PROVIDER' | 'MAIL_HTTP_API_KEY' | 'MAIL_FROM'> = [
+        'MAIL_HTTP_PROVIDER',
+        'MAIL_HTTP_API_KEY',
+        'MAIL_FROM',
+      ];
+      for (const key of required) {
+        if (!env[key]) {
+          ctx.addIssue({ code: 'custom', path: [key], message: `requis quand MAIL_DRIVER='http'` });
+        }
+      }
     }
     if (env.MAIL_DRIVER === 'smtp') {
       const required: Array<'MAIL_HOST' | 'MAIL_USER' | 'MAIL_PASSWORD' | 'MAIL_FROM'> = [
