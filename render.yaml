@@ -1,20 +1,25 @@
-# Render Blueprint — déploiement en un clic du CRM (API NestJS + Postgres).
-# Depuis le dashboard Render : New > Blueprint > sélectionner ce dépôt (branche workbuddy/main-7e0d91fb).
-# Les variables marquées `sync: false` (MAIL_*) te seront demandées à la création.
-# CORS_ORIGINS et APP_WEB_URL sont pré-remplies avec crm.timestradinginter.com.
-
-databases:
-  - name: crm-postgres
-    databaseName: crm
-    user: crm_app
-    plan: free
-    postgresMajorVersion: 16
+# Render Blueprint — API CRM (NestJS) + base PostgreSQL Neon.
+#
+# Etat reel du deploiement (service cree via l'API Render, pas via Blueprint) :
+#   - service web  : crm-api  -> https://crm-api-eogq.onrender.com
+#   - domaine      : https://crm.timestradinginter.com  (CNAME vers Render, gere chez Hostinger)
+#   - base         : Neon PostgreSQL 16 (projet dark-bird-33272139, region aws-us-west-2)
+#
+# Deux URL de connexion distinctes, c'est volontaire :
+#   DATABASE_URL           -> role crm_app     (LOGIN, NOSUPERUSER, NOBYPASSRLS) => la RLS est appliquee
+#   DATABASE_MIGRATION_URL -> role neondb_owner (proprietaire) => migrations + sync des policies
+# L'API refuse de demarrer si DATABASE_URL utilise un role qui contourne la RLS
+# (cf. PrismaService.assertUnprivilegedRole).
+#
+# Les deux URL contiennent des mots de passe : elles ne sont JAMAIS commitees,
+# elles sont saisies dans le dashboard Render (marquees `sync: false` ci-dessous).
 
 services:
   - type: web
     name: crm-api
     runtime: node
     plan: free
+    region: oregon
     branch: workbuddy/main-7e0d91fb
     rootDir: .
     # NPM_CONFIG_PRODUCTION=false => installe aussi les devDependencies
@@ -26,18 +31,17 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      # Empêche npm d'ignorer les devDependencies pendant le build.
+      # Empeche npm d'ignorer les devDependencies pendant le build.
       - key: NPM_CONFIG_PRODUCTION
         value: "false"
-      # Render injecte automatiquement l'URL complète (rôle crm_app, sans superuser).
+
+      # --- Base de donnees (Neon) : a saisir dans le dashboard Render ---
       - key: DATABASE_URL
-        fromDatabase:
-          name: crm-postgres
-          property: connectionString
+        sync: false
       - key: DATABASE_MIGRATION_URL
-        fromDatabase:
-          name: crm-postgres
-          property: connectionString
+        sync: false
+
+      # --- Authentification ---
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_ACCESS_TTL_SECONDS
@@ -48,21 +52,31 @@ services:
         value: "5"
       - key: LOGIN_LOCK_MINUTES
         value: "15"
+
+      # --- Limitation de debit ---
       - key: RATE_LIMIT_WINDOW_SECONDS
         value: "60"
       - key: RATE_LIMIT_MAX
         value: "300"
       - key: AUTH_RATE_LIMIT_MAX
         value: "20"
-      # Origine du front (même domaine que l'API pour l'instant).
+
+      # --- Front / domaine ---
       - key: CORS_ORIGINS
+        value: "https://crm.timestradinginter.com"
+      - key: APP_WEB_URL
         value: "https://crm.timestradinginter.com"
       - key: TRUST_PROXY
         value: "1"
-      - key: APP_WEB_URL
-        value: "https://crm.timestradinginter.com"
+
+      # Swagger monte sur /api/docs (utile tant qu'il n'y a pas de front).
+      # A repasser a "0" le jour ou l'API est ouverte au public.
       - key: SWAGGER_ENABLED
-        value: "0"
+        value: "1"
+
+      # --- E-mails transactionnels (Hostinger SMTP) ---
+      # En production, MAIL_DRIVER=log est refuse par la validation Zod :
+      # les 3 variables ci-dessous doivent etre renseignees.
       - key: MAIL_DRIVER
         value: smtp
       - key: MAIL_HOST
