@@ -12,7 +12,7 @@ les membres, les rôles et l'audit, avec une isolation multi-tenant testée. **A
 | Fonctionne (implémenté et testé) | N'existe pas encore |
 | --- | --- |
 | Inscription, connexion, déconnexion, rotation des jetons | Application web et mobile |
-| Vérification d'e-mail et réinitialisation du mot de passe (jetons) | **Envoi réel d'e-mails** : le pilote `log` écrit le message dans la console et n'envoie rien |
+| Vérification d'e-mail et réinitialisation du mot de passe (jetons) | **Envoi réel d'e-mails** : possible via le pilote `smtp` (SMTP générique, ex. Hostinger) ; reste à brancher un fournisseur dédié (Resend/Brevo) si besoin de meilleure délivrabilité |
 | Organisations, multi-appartenance, changement d'organisation active | MFA, OAuth social |
 | Invitations de membres, rôles système et personnalisés, permissions | Portées `OWN` / `TEAM` / `DEPARTMENT` appliquées à des données (phase 2) |
 | Isolation tenant : contexte serveur, filtres, Row Level Security, FK composites | Redis, files d'attente, workers, temps réel, stockage de fichiers |
@@ -41,7 +41,8 @@ npm run dev:api      # terminal 2 : API en mode rechargement
 - Santé : <http://localhost:3000/api/v1/health/ready>
 
 Pour tester les parcours par e-mail en local, le lien (et son jeton) apparaît dans la console de
-l'API sur une ligne `[E-MAIL NON ENVOYÉ — pilote "log"]`.
+l'API sur une ligne `[E-MAIL NON ENVOYÉ — pilote "log"]`. En production, utilisez le pilote `smtp`
+(voir `MAIL_*` dans `.env.example`) pour un envoi réel via un serveur SMTP (ex. Hostinger).
 
 ## Commandes
 

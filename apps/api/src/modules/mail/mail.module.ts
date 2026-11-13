@@ -1,21 +1,9 @@
 import { Global, Injectable, Logger, Module } from '@nestjs/common';
+import { APP_CONFIG, type AppConfig } from '../../config/env';
+import { Mailer, type MailMessage } from './mailer.interface';
+import { SmtpMailer } from './smtp-mailer';
 
-export interface MailMessage {
-  to: string;
-  /** Identifiant du gabarit ; le rendu HTML/texte viendra avec un vrai connecteur. */
-  template: 'email-verification' | 'password-reset' | 'organization-invitation';
-  subject: string;
-  /** Variables du gabarit (liens d'action…). */
-  variables: Record<string, string>;
-}
-
-/**
- * Port d'envoi d'e-mails. Les modules dépendent de cette abstraction ; le
- * connecteur réel (SMTP, Resend…) sera un adaptateur ajouté en phase 5.
- */
-export abstract class Mailer {
-  abstract send(message: MailMessage): Promise<void>;
-}
+export { Mailer, type MailMessage } from './mailer.interface';
 
 /**
  * Adaptateur de DÉVELOPPEMENT : n'envoie AUCUN e-mail.
@@ -35,9 +23,24 @@ export class LogMailer extends Mailer {
   }
 }
 
+/**
+ * Résout le connecteur d'envoi réel selon `MAIL_DRIVER` :
+ * - `log`  → journalise dans la console (développement) ;
+ * - `smtp` → envoie via le serveur SMTP configuré (ex. Hostinger).
+ *
+ * La validation de configuration (config/env.ts) garantit qu'on n'accepte pas
+ * `log` en production, et qu'un pilote `smtp` a bien ses paramètres.
+ */
+function createMailer(config: AppConfig): Mailer {
+  if (config.NODE_ENV === 'production' && config.MAIL_DRIVER === 'log') {
+    throw new Error("MAIL_DRIVER 'log' interdit en production : utilisez 'smtp'.");
+  }
+  return config.MAIL_DRIVER === 'smtp' ? new SmtpMailer(config) : new LogMailer();
+}
+
 @Global()
 @Module({
-  providers: [{ provide: Mailer, useClass: LogMailer }],
+  providers: [{ provide: Mailer, useFactory: createMailer, inject: [APP_CONFIG] }],
   exports: [Mailer],
 })
 export class MailModule {}
