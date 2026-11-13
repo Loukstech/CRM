@@ -1,0 +1,39 @@
+{
+  "name": "crm-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plateforme CRM SaaS multi-tenant — monorepo",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "setup": "node scripts/setup-env.mjs",
+    "db:start": "node scripts/dev-db.mjs",
+    "db:stop": "node scripts/dev-db-stop.mjs",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy && tsx prisma/sync-permissions.ts",
+    "db:seed": "npm run build -w @crm/api && node apps/api/dist/cli/seed.js",
+    "dev:api": "npm run start:dev -w @crm/api",
+    "build": "npm run build -w @crm/api",
+    "start:api": "npm run start -w @crm/api",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck -w @crm/api",
+    "test": "node scripts/test-with-db.mjs",
+    "format": "prettier --write \"**/*.{ts,mjs,json,md,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,mjs,json,yml}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "embedded-postgres": "^18.6.0-beta.19",
+    "eslint": "^10.14.0",
+    "pg": "^8.23.1",
+    "prettier": "^3.10.1",
+    "prisma": "^6.19.3",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2"
+  }
+}

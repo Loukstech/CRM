@@ -1,0 +1,41 @@
+# Intégration continue.
+# ATTENTION : ce fichier n'a encore JAMAIS été exécuté (aucun dépôt distant
+# n'existe). Il reprend exactement les commandes validées en local.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Client Prisma
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://unused:unused@localhost:5432/unused
+          DATABASE_MIGRATION_URL: postgresql://unused:unused@localhost:5432/unused
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      # Démarre un PostgreSQL embarqué jetable, applique les migrations, lance Jest.
+      - run: npm test
+      # Non bloquant pour l'instant : la seule alerte « high » connue (deepmerge-ts)
+      # vient de l'outil en ligne de commande Prisma 6 et ne se corrige qu'en passant
+      # à Prisma 7 (voir docs/rapports/phase-1a-fondations.md, dette technique).
+      - name: Vulnérabilités des dépendances
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true

@@ -1,0 +1,295 @@
+// Schéma Prisma — CRM SaaS
+//
+// Périmètre actuel : PHASE 1 (identité, organisations, memberships, RBAC, audit).
+// Les tables des modules métier (contacts, deals, factures…) sont décrites dans
+// docs/architecture/03-modele-de-donnees-erd.md et seront ajoutées au schéma
+// dans la migration de leur phase, jamais avant.
+//
+// Règles à respecter pour TOUTE nouvelle table appartenant à un tenant :
+//   1. colonne organization_id NOT NULL + index ;
+//   2. @@unique([organizationId, id]) pour servir de cible aux FK composites ;
+//   3. FK composites (organization_id, xxx_id) vers les autres tables tenant ;
+//   4. RLS ENABLE + FORCE + policies dans la migration SQL (Prisma ne les gère pas) ;
+//   5. GRANT explicites au rôle crm_app dans la migration.
+// Le test apps/api/test/rls.e2e-spec.ts échoue si une table avec organization_id
+// n'a pas de RLS forcée.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Connexion d'exécution : rôle applicatif SANS privilège (soumis à la RLS).
+  url = env("DATABASE_URL")
+  // Connexion de migration : rôle propriétaire du schéma (DDL uniquement).
+  directUrl = env("DATABASE_MIGRATION_URL")
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+/// Portée d'une permission accordée à un rôle (du plus étroit au plus large).
+enum PermissionScope {
+  OWN
+  TEAM
+  DEPARTMENT
+  ORGANIZATION
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+enum UserTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+// ─────────────────── Identité (tables globales, hors tenant) ───────────────────
+
+/// Compte utilisateur global : une personne peut appartenir à plusieurs organisations.
+model User {
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// E-mail normalisé (trim + minuscules) par l'application.
+  email            String     @unique @db.VarChar(320)
+  name             String     @db.VarChar(200)
+  passwordHash     String     @map("password_hash") @db.VarChar(255)
+  avatarUrl        String?    @map("avatar_url") @db.VarChar(2048)
+  status           UserStatus @default(ACTIVE)
+  locale           String     @default("fr") @db.VarChar(10)
+  emailVerifiedAt  DateTime?  @map("email_verified_at") @db.Timestamptz(3)
+  failedLoginCount Int        @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt      DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  memberships     Membership[]
+  sessions        Session[]
+  tokens          UserToken[]
+  invitationsSent Invitation[]
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+/// Une session = une connexion sur un appareil. Révocable côté serveur.
+model Session {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  /// Organisation active de la session, validée côté serveur (jamais fournie librement par le client).
+  activeOrganizationId String?   @map("active_organization_id") @db.Uuid
+  ip                   String?   @db.VarChar(64)
+  userAgent            String?   @map("user_agent") @db.VarChar(512)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt           DateTime  @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  expiresAt            DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt            DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedReason        String?   @map("revoked_reason") @db.VarChar(64)
+
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganization Organization?  @relation(fields: [activeOrganizationId], references: [id], onDelete: SetNull)
+  refreshTokens      RefreshToken[]
+
+  @@index([userId])
+  @@index([activeOrganizationId])
+  @@map("sessions")
+}
+
+/// Jetons de rafraîchissement à usage unique (rotation). Seul le hash SHA-256 est stocké.
+model RefreshToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String    @map("session_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  /// Renseigné lors de la rotation. Une réutilisation ultérieure révoque la session.
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("refresh_tokens")
+}
+
+/// Jetons à usage unique : vérification d'e-mail et réinitialisation de mot de passe.
+model UserToken {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String        @map("user_id") @db.Uuid
+  type       UserTokenType
+  tokenHash  String        @unique @map("token_hash") @db.Char(64)
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt  DateTime      @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime?     @map("consumed_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("user_tokens")
+}
+
+/// Catalogue global des permissions. Source de vérité : le code
+/// (apps/api/src/modules/permissions/permission-catalog.ts), synchronisé par
+/// prisma/sync-permissions.ts. Lecture seule pour le rôle applicatif.
+model Permission {
+  key         String   @id @db.VarChar(100)
+  description String   @db.VarChar(255)
+  /// false : la permission n'a de sens qu'à la portée ORGANIZATION.
+  scoped      Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+// ───────────────────────── Tenant : organisations ─────────────────────────
+
+model Organization {
+  id        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String             @db.VarChar(200)
+  slug      String             @unique @db.VarChar(80)
+  /// ISO 3166-1 alpha-2
+  country   String             @db.VarChar(2)
+  /// ISO 4217
+  currency  String             @db.VarChar(3)
+  /// Identifiant IANA (ex. Africa/Porto-Novo)
+  timezone  String             @db.VarChar(64)
+  locale    String             @default("fr") @db.VarChar(10)
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  memberships Membership[]
+  roles       Role[]
+  invitations Invitation[]
+  auditLogs   AuditLog[]
+  sessions    Session[]
+
+  @@map("organizations")
+}
+
+model Role {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  /// Clé stable des rôles système (owner, admin, member) ; NULL pour les rôles personnalisés.
+  systemKey      String?  @map("system_key") @db.VarChar(50)
+  name           String   @db.VarChar(100)
+  description    String?  @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  permissions  RolePermission[]
+  memberships  Membership[]
+  invitations  Invitation[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+  @@unique([organizationId, systemKey])
+  @@map("roles")
+}
+
+model RolePermission {
+  organizationId String          @map("organization_id") @db.Uuid
+  roleId         String          @map("role_id") @db.Uuid
+  permissionKey  String          @map("permission_key") @db.VarChar(100)
+  scope          PermissionScope @default(ORGANIZATION)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  // FK composite : le rôle appartient forcément à la même organisation.
+  role       Role       @relation(fields: [organizationId, roleId], references: [organizationId, id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@id([roleId, permissionKey])
+  @@index([organizationId])
+  @@index([permissionKey])
+  @@map("role_permissions")
+}
+
+model Membership {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  roleId         String           @map("role_id") @db.Uuid
+  status         MembershipStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  // FK composite : impossible d'affecter le rôle d'une autre organisation.
+  role         Role         @relation(fields: [organizationId, roleId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, id])
+  @@index([userId])
+  @@index([organizationId, roleId])
+  @@map("memberships")
+}
+
+model Invitation {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String           @map("organization_id") @db.Uuid
+  /// E-mail normalisé du destinataire.
+  email           String           @db.VarChar(320)
+  roleId          String           @map("role_id") @db.Uuid
+  tokenHash       String           @unique @map("token_hash") @db.Char(64)
+  status          InvitationStatus @default(PENDING)
+  invitedByUserId String?          @map("invited_by_user_id") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt       DateTime         @map("expires_at") @db.Timestamptz(3)
+  acceptedAt      DateTime?        @map("accepted_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  role         Role         @relation(fields: [organizationId, roleId], references: [organizationId, id], onDelete: Restrict)
+  invitedBy    User?        @relation(fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+  // + index unique partiel (organization_id, email) WHERE status = 'PENDING' (migration SQL).
+  @@index([organizationId, status])
+  @@index([organizationId, roleId])
+  @@index([invitedByUserId])
+  @@map("invitations")
+}
+
+/// Journal d'audit en ajout seul (le rôle applicatif n'a ni UPDATE ni DELETE).
+/// organization_id NULL = événement d'identité hors tenant (ex. échec de connexion).
+model AuditLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String   @db.VarChar(100)
+  entityType     String   @map("entity_type") @db.VarChar(60)
+  entityId       String?  @map("entity_id") @db.VarChar(64)
+  metadata       Json     @default("{}")
+  ip             String?  @db.VarChar(64)
+  userAgent      String?  @map("user_agent") @db.VarChar(512)
+  requestId      String?  @map("request_id") @db.VarChar(64)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actor        User?         @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, entityType, entityId])
+  @@index([actorUserId])
+  @@map("audit_logs")
+}
