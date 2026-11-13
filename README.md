@@ -3,22 +3,24 @@
 Monorepo de la plateforme CRM décrite dans le
 [cahier des charges](cahier_des_charges_CRM_SaaS.md).
 
-**État : phase 1a terminée — socle technique.** L'API gère l'authentification, les organisations,
-les membres, les rôles et l'audit, avec une isolation multi-tenant testée. **Aucun module CRM
-(contacts, ventes, facturation…) n'existe encore**, ni application web, ni application mobile.
+**État : phases 1a et 1b terminées — socle technique en ligne.** L'API gère l'authentification, les
+organisations, les membres, les rôles et l'audit, avec une isolation multi-tenant testée. Elle est
+déployée sur <https://crm.timestradinginter.com> (Render + Neon). **Aucun module CRM (contacts,
+ventes, facturation…) n'existe encore**, ni application web, ni application mobile.
 
 ## Ce qui fonctionne / ce qui n'existe pas
 
 | Fonctionne (implémenté et testé) | N'existe pas encore |
 | --- | --- |
 | Inscription, connexion, déconnexion, rotation des jetons | Application web et mobile |
-| Vérification d'e-mail et réinitialisation du mot de passe (jetons) | **Envoi réel d'e-mails** : possible via le pilote `smtp` (SMTP générique, ex. Hostinger) ; reste à brancher un fournisseur dédié (Resend/Brevo) si besoin de meilleure délivrabilité |
+| Vérification d'e-mail et réinitialisation du mot de passe (jetons) | **Envoi réel d'e-mails** : trois pilotes existent (`log`, `smtp`, `http`), mais aucun n'est actif en production — il manque une clé fournisseur (voir [ADR-0007](docs/decisions/ADR-0007-emails-via-api-http.md)) |
 | Organisations, multi-appartenance, changement d'organisation active | MFA, OAuth social |
 | Invitations de membres, rôles système et personnalisés, permissions | Portées `OWN` / `TEAM` / `DEPARTMENT` appliquées à des données (phase 2) |
 | Isolation tenant : contexte serveur, filtres, Row Level Security, FK composites | Redis, files d'attente, workers, temps réel, stockage de fichiers |
 | Journal d'audit en ajout seul | Console Super Admin, abonnements, quotas |
-| Limitation de débit (en mémoire, une seule instance) | Déploiement : aucun n'a été fait ni testé |
-| Documentation OpenAPI | Docker (non livré : non testable ici) ; CI écrite mais jamais exécutée |
+| Limitation de débit (en mémoire, une seule instance) | Sauvegardes de la base, supervision, alertes |
+| Documentation OpenAPI | Docker (non livré : inutile, la plateforme construit depuis le dépôt) ; CI écrite mais jamais exécutée |
+| **Déploiement réel** : Render + Neon + domaine Hostinger, vérifié | Interface d'administration |
 
 ## Prérequis
 
@@ -41,8 +43,10 @@ npm run dev:api      # terminal 2 : API en mode rechargement
 - Santé : <http://localhost:3000/api/v1/health/ready>
 
 Pour tester les parcours par e-mail en local, le lien (et son jeton) apparaît dans la console de
-l'API sur une ligne `[E-MAIL NON ENVOYÉ — pilote "log"]`. En production, utilisez le pilote `smtp`
-(voir `MAIL_*` dans `.env.example`) pour un envoi réel via un serveur SMTP (ex. Hostinger).
+l'API sur une ligne `[E-MAIL NON ENVOYÉ — pilote "log"]`. Trois pilotes existent pour l'envoi réel
+(voir `MAIL_*` dans [.env.example](.env.example)) : `smtp` (serveur SMTP classique) et `http` (API
+HTTPS Brevo/Resend). **Sur une instance Free de Render, `smtp` ne peut pas fonctionner** : les ports
+25, 465 et 587 sont filtrés — utilisez `http`.
 
 ## Commandes
 
@@ -54,6 +58,36 @@ l'API sur une ligne `[E-MAIL NON ENVOYÉ — pilote "log"]`. En production, util
 | `npm run db:start` · `npm run db:stop` | Base de développement (données dans `.data/`) |
 | `npm run db:migrate` | Applique les migrations et synchronise le catalogue de permissions (base déjà démarrée) |
 | `npm run db:seed` | Compte de démonstration (refusé en production) |
+
+## Déploiement
+
+En ligne sur **<https://crm.timestradinginter.com>** — Render (API, plan Free) + Neon
+(PostgreSQL 16) + DNS Hostinger.
+
+| URL | Rôle |
+| --- | --- |
+| `/api/v1/health/ready` | Sonde de santé (utilisée par la plateforme) |
+| `/api/v1/health/live` | Vivacité |
+| `/api/docs` | Documentation OpenAPI interactive |
+
+```bash
+curl https://crm.timestradinginter.com/api/v1/health/ready
+# {"status":"ok","checks":{"database":"ok"}}
+```
+
+La configuration est décrite dans [render.yaml](render.yaml) ; les variables d'environnement
+attendues sont listées dans [.env.production.example](.env.production.example).
+
+**Deux URL de connexion, c'est volontaire** — ne les confondez pas :
+
+| Variable | Rôle | Usage |
+| --- | --- | --- |
+| `DATABASE_URL` | `crm_app` — sans `BYPASSRLS` | exécution ; la RLS est réellement appliquée |
+| `DATABASE_MIGRATION_URL` | propriétaire de la base | `prisma migrate deploy`, synchronisation des permissions |
+
+L'API **refuse de démarrer** si `DATABASE_URL` pointe sur un rôle superutilisateur ou `BYPASSRLS` :
+c'est un garde-fou, pas une panne. Détail de la mise en place, procédure sur une base neuve et limites
+connues : [rapport de phase 1b](docs/rapports/phase-1b-deploiement.md).
 
 ## Tests
 
@@ -86,8 +120,9 @@ docs/            architecture, décisions (ADR), rapports de phase
 | [03 — Modèle de données](docs/architecture/03-modele-de-donnees-erd.md) | ERD de la phase 1 (exact) et cible par domaine |
 | [04 — Multi-tenant et RBAC](docs/architecture/04-multi-tenant-et-rbac.md) | Barrières d'isolation, policies, permissions, authentification |
 | [05 — Plan](docs/architecture/05-plan-implementation.md) | Phases, Definition of Done, décisions attendues |
-| [Décisions](docs/decisions/) | ADR-0001 à 0005 |
-| [Rapport de phase 1a](docs/rapports/phase-1a-fondations.md) | Ce qui a été fait, vérifié, et ce qui reste |
+| [Décisions](docs/decisions/) | ADR-0001 à 0007 (hébergement, isolation, authentification, e-mails) |
+| [Rapport de phase 1a](docs/rapports/phase-1a-fondations.md) | Socle technique : ce qui a été fait, vérifié, et ce qui reste |
+| [Rapport de phase 1b](docs/rapports/phase-1b-deploiement.md) | Premier déploiement : topologie, DNS, RLS en production, e-mails, reste à faire |
 
 ## Règles pour contribuer
 

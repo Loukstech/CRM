@@ -1,6 +1,7 @@
 # ADR-0004 — Hébergement sans VPS : services managés
 
-- **Statut :** orientation acceptée (2026-11-13) ; **choix des fournisseurs à confirmer**
+- **Statut :** orientation acceptée (2026-11-13) ; **fournisseurs choisis**, voir
+  [ADR-0006](ADR-0006-fournisseurs-hebergement.md)
 - **Contexte :** le cahier (§5.1, §13) suppose Docker. Vous ne disposez pas de VPS, et la machine
   de développement n'a ni Docker ni PostgreSQL.
 
@@ -36,5 +37,8 @@
 
 ## Conséquence
 
-Aucun déploiement n'a été réalisé. Le premier déploiement fait partie de la phase 1b et commencera
-par la validation des trois premiers points ci-dessus sur le fournisseur choisi.
+Les points à vérifier ci-dessus ont été validés sur les fournisseurs retenus (voir
+[ADR-0006](ADR-0006-fournisseurs-hebergement.md)) et le premier déploiement est réalisé : il est
+décrit dans le [rapport de phase 1b](../rapports/phase-1b-deploiement.md). Le choix des fournisseurs
+a d'ailleurs confirmé le point sur les ports SMTP : les filtrer n'est pas un cas rare, c'est la
+politique par défaut des hébergeurs — d'où [ADR-0007](ADR-0007-emails-via-api-http.md).
