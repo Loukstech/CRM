@@ -1,5 +1,5 @@
 # Render Blueprint — déploiement en un clic du CRM (API NestJS + Postgres).
-# Depuis le dashboard Render : New > Blueprint > sélectionner ce dépôt (branche main).
+# Depuis le dashboard Render : New > Blueprint > sélectionner ce dépôt (branche workbuddy/main-7e0d91fb).
 # Les variables marquées `sync: false` (MAIL_*) te seront demandées à la création.
 # CORS_ORIGINS et APP_WEB_URL sont pré-remplies avec crm.timestradinginter.com.
 
