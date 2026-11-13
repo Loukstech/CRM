@@ -189,50 +189,88 @@ Un troisième pilote a été ajouté derrière le port `Mailer` existant — voi
 | `smtp` | ports 25 / 465 / 587 | hébergeur qui ne filtre pas ces ports |
 | `http` | HTTPS, port 443 | **Render Free**, Brevo ou Resend |
 
-Le pilote `http` n'est pas encore actif : il attend une clé API. En attendant, l'application reste
-utilisable — `login` n'exige pas `emailVerifiedAt`, seuls la vérification d'adresse et la
-réinitialisation de mot de passe sont muettes.
+Le pilote `http` est désormais **actif et vérifié de bout en bout**. Mise en service :
+
+1. Le domaine `timestradinginter.com` a été déclaré chez Brevo, qui a fourni quatre enregistrements
+   DNS. Ils ont été posés dans la zone Hostinger par l'API REST :
+
+   | Type | Nom | Valeur |
+   | --- | --- | --- |
+   | CNAME | `brevo1._domainkey` | `b1.timestradinginter-com.dkim.brevo.com` |
+   | CNAME | `brevo2._domainkey` | `b2.timestradinginter-com.dkim.brevo.com` |
+   | TXT | `@` | `brevo-code:…` |
+   | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com` |
+
+   Le SPF existant a été **complété**, pas remplacé : `v=spf1 include:_spf.mail.hostinger.com
+   include:spf.brevo.com ~all`. La messagerie Hostinger continue donc de fonctionner.
+
+   > Piège rencontré : l'API DNS Hostinger **ajoute** les valeurs d'un enregistrement au lieu de les
+   > remplacer (`overwrite: false`). Deux SPF ou deux DMARC au même nom rendent ces mécanismes
+   > invalides — un SPF en double provoque un `permerror`. Il a fallu supprimer les TXT en doublon
+   > (`DELETE` filtré sur `name` + `type`) puis les reposer proprement.
+
+2. Brevo a confirmé les quatre enregistrements (`status: true`), puis l'authentification
+   (`PUT /v3/senders/domains/{domaine}/authenticate` → `verified: true`, `authenticated: true`).
+
+3. Côté Render : `MAIL_DRIVER=http`, `MAIL_HTTP_PROVIDER=brevo`, `MAIL_HTTP_API_KEY` renseignée —
+   les trois en une seule opération, sinon la validation Zod empêche le démarrage.
+
+Résultat, vérifié en production :
+
+```
+Render  : LOG HttpMailer  E-mail envoyé à=contact@timestradinginter.com gabarit=email-verification fournisseur=brevo
+Brevo   : 19:33:51 requests  | Confirmez votre adresse e-mail
+          19:33:53 delivered | Confirmez votre adresse e-mail
+```
+
+Un envoi de contrôle effectué **avant** l'authentification du domaine avait été refusé
+(`Sending has been rejected because the sender you used contact@timestradinginter.com is not valid`) :
+c'est bien l'authentification DNS qui débloque l'envoi, pas la clé API.
+
+> **Limite subsistante :** le lien contenu dans l'e-mail pointe sur
+> `https://crm.timestradinginter.com/verify-email?token=…`, qui répond **404** — il n'existe pas
+> d'interface web. L'e-mail est bien remis, mais son lien n'est pas cliquable tant que le front n'est
+> pas construit. `APP_WEB_URL` devra alors pointer sur le front, pas sur l'API.
 
 ## 9. Ce qui est simulé, absent ou fragile
 
 | Élément | Réalité |
 | --- | --- |
-| **Envoi d'e-mails** | Non opérationnel : pilote `http` écrit, en attente d'une clé Brevo |
+| **Envoi d'e-mails** | Opérationnel via Brevo, domaine authentifié, envoi réel confirmé (`delivered`) |
+| **Liens des e-mails** | `APP_WEB_URL` pointe sur l'API : `/verify-email` et `/reset-password` renvoient **404**. Le lien est mort tant qu'il n'y a pas d'interface |
 | **Application web** | Inexistante. Le dépôt ne contient que l'API |
-| **Liens des e-mails** | `APP_WEB_URL` pointe sur l'API : `/verify-email` et `/reset-password` renverront 404 tant qu'il n'y a pas d'interface |
 | **Mise en veille** | Instance Free endormie après 15 min sans trafic → ~1 min de réveil à la première requête |
 | **Plusieurs instances** | Impossible : la limitation de débit est en mémoire |
 | **Sauvegardes** | Aucune. Neon Free n'inclut pas de restauration à un instant donné |
+| **Quota d'e-mails** | Brevo gratuit : 300 messages par jour |
 | **CI** | Écrite dans `.github/` mais jamais exécutée sur ce dépôt |
-| **Secrets** | Les clés d'API ont circulé en clair pendant la mise en place : voir §11 |
+| **Secrets** | Les clés d'API ont circulé en clair pendant la mise en place : voir §10 |
 
 ## 10. Ce qui reste à faire
 
 ### Bloquant pour un usage réel
 
-1. **Activer le pilote e-mail `http`** — créer un compte Brevo, générer une clé API, la saisir dans
-   Render sous `MAIL_HTTP_API_KEY`, **puis** basculer `MAIL_DRIVER` sur `http`. Dans cet ordre :
-   la validation Zod refuse de démarrer si la clé manque.
-2. **Authentifier le domaine chez Brevo** — enregistrements SPF/DKIM/DMARC à créer dans la zone
-   Hostinger. Sans cela, Brevo refuse d'expédier depuis `contact@timestradinginter.com` ou la
-   délivrabilité s'effondre.
-3. **Vérifier le compte `contact@timestradinginter.com`** une fois les e-mails fonctionnels, et
-   changer son mot de passe provisoire.
+1. **Vérifier le compte `contact@timestradinginter.com`** — l'e-mail est remis, mais son lien
+   renvoie 404 faute d'interface. En attendant le front, le compte fonctionne quand même
+   (`login` n'exige pas `emailVerifiedAt`), et son mot de passe provisoire est à changer.
+2. **Construire l'interface web**, puis pointer `APP_WEB_URL` et `CORS_ORIGINS` dessus : c'est ce
+   qui rendra cliquables les liens de vérification et de réinitialisation.
 
 ### Hygiène et sécurité
 
-4. **Tourner tous les secrets exposés pendant la mise en place** : clé API Render, clé API Neon,
-   jetons Hostinger, `JWT_ACCESS_SECRET`, mots de passe `neondb_owner` et `crm_app`. Tant que ce
-   n'est pas fait, considérez-les comme compromis.
-5. **Supprimer le PostgreSQL Render inutilisé** `dpg-dbrj5gt6e07s73bsohfg-a` (expire le
+3. **Tourner tous les secrets exposés pendant la mise en place** : clé API Render, clé API Neon,
+   clé API Brevo, jetons Hostinger, `JWT_ACCESS_SECRET`, mots de passe `neondb_owner` et `crm_app`.
+   Tant que ce n'est pas fait, considérez-les comme compromis.
+4. **Supprimer le PostgreSQL Render inutilisé** `dpg-dbrj5gt6e07s73bsohfg-a` (expire le
    2026-12-13). Il ne sert plus à rien et consomme le quota d'une base Free par espace de travail.
 
 ### Avant d'ouvrir au public
 
-6. `SWAGGER_ENABLED=1` aujourd'hui : à repasser à `0` le jour où l'API est exposée.
-7. Construire l'interface web, puis pointer `APP_WEB_URL` et `CORS_ORIGINS` dessus.
-8. Passer sur un plan payant si la mise en veille gêne l'usage, et externaliser la limitation de
+5. `SWAGGER_ENABLED=1` aujourd'hui : à repasser à `0` le jour où l'API est exposée.
+6. Passer sur un plan payant si la mise en veille gêne l'usage, et externaliser la limitation de
    débit (Redis) avant de lancer plusieurs instances.
+7. Surveiller le quota Brevo (300 messages/jour) : au-delà, les envois sont refusés sans que
+   l'application ne s'en aperçoive — `safeSend()` journalise l'échec sans le propager.
 
 ## 11. Journal des commits
 
@@ -242,7 +280,8 @@ réinitialisation de mot de passe sont muettes.
 | `c9c4433` | Correction du commentaire de branche dans `render.yaml` |
 | `6734c19` | `render.yaml` aligné sur la réalité : Neon, pas Render Postgres ; Swagger activé |
 | `a102b1e` | Pilote e-mail HTTP (Brevo/Resend) pour contourner le blocage SMTP de Render |
+| `c8255ad` · `f67e971` | Documentation du déploiement (ce rapport, ADR-0006 et ADR-0007) |
 
 Déploiements correspondants : `dep-dbrkq2oae00c73ds3en0` (`render.yaml`),
-`dep-dbrkv2jl550s73coqk80` (mot de passe SMTP), `dep-dbrl48p7lnhs73dcl6dg` (pilote HTTP) — tous
-terminés en `live`.
+`dep-dbrkv2jl550s73coqk80` (mot de passe SMTP), `dep-dbrl48p7lnhs73dcl6dg` (pilote HTTP),
+`dep-dbrlfa0n74is739757pg` (bascule vers Brevo) — tous terminés en `live`.

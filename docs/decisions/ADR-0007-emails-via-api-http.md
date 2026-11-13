@@ -1,6 +1,7 @@
 # ADR-0007 — Envoi d'e-mails par API HTTP plutôt que SMTP
 
-- **Statut :** accepté (2026-11-13) ; **activation en attente d'une clé fournisseur**
+- **Statut :** accepté et **en service** (2026-11-13) — Brevo, domaine authentifié, envoi réel
+  confirmé
 - **Contexte :** les e-mails transactionnels (vérification d'adresse, réinitialisation de mot de
   passe, invitation) passaient par le pilote `smtp`, avec la boîte Hostinger
   `contact@timestradinginter.com`. Les identifiants ont été validés en direct : authentification
@@ -63,7 +64,19 @@ Les trois pilotes :
 
 ## Conséquence
 
-Le pilote `http` est écrit, compilé et déployé, mais **inactif** : `MAIL_DRIVER` vaut encore `smtp`
-côté plateforme, faute de clé. L'application reste utilisable entre-temps — `login` n'exige pas
-`emailVerifiedAt`. L'activation se fait en deux temps, dans cet ordre : saisir `MAIL_HTTP_API_KEY`,
-puis basculer `MAIL_DRIVER` sur `http`.
+Le pilote `http` est **en service** avec Brevo. Le domaine `timestradinginter.com` a été authentifié
+(DKIM ×2, code Brevo, DMARC ; SPF complété par `include:spf.brevo.com`), et un envoi réel déclenché
+depuis l'application a été remis :
+
+```
+19:33:51 requests  | Confirmez votre adresse e-mail
+19:33:53 delivered | Confirmez votre adresse e-mail
+```
+
+Un envoi de contrôle tenté **avant** l'authentification du domaine avait été rejeté par Brevo
+(`sender you used contact@timestradinginter.com is not valid`). La clé API seule ne suffit donc pas :
+c'est l'authentification DNS qui autorise l'envoi. À retenir pour tout nouveau domaine.
+
+Reste ouvert : le lien des e-mails pointe sur `APP_WEB_URL`, c'est-à-dire l'API, où `/verify-email`
+répond 404. Le transport fonctionne, mais le parcours utilisateur ne sera complet qu'avec l'interface
+web.

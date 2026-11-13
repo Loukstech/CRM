@@ -13,7 +13,7 @@ ventes, facturation…) n'existe encore**, ni application web, ni application mo
 | Fonctionne (implémenté et testé) | N'existe pas encore |
 | --- | --- |
 | Inscription, connexion, déconnexion, rotation des jetons | Application web et mobile |
-| Vérification d'e-mail et réinitialisation du mot de passe (jetons) | **Envoi réel d'e-mails** : trois pilotes existent (`log`, `smtp`, `http`), mais aucun n'est actif en production — il manque une clé fournisseur (voir [ADR-0007](docs/decisions/ADR-0007-emails-via-api-http.md)) |
+| Vérification d'e-mail et réinitialisation du mot de passe (jetons) | **Interface web** : les e-mails partent réellement (Brevo, domaine authentifié), mais leurs liens renvoient 404 tant qu'il n'y a pas de front |
 | Organisations, multi-appartenance, changement d'organisation active | MFA, OAuth social |
 | Invitations de membres, rôles système et personnalisés, permissions | Portées `OWN` / `TEAM` / `DEPARTMENT` appliquées à des données (phase 2) |
 | Isolation tenant : contexte serveur, filtres, Row Level Security, FK composites | Redis, files d'attente, workers, temps réel, stockage de fichiers |
