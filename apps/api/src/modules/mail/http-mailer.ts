@@ -54,9 +54,7 @@ export class HttpMailer extends Mailer {
     this.apiKey = MAIL_HTTP_API_KEY;
     this.endpoint =
       MAIL_HTTP_ENDPOINT ??
-      (this.provider === 'brevo'
-        ? 'https://api.brevo.com/v3/smtp/email'
-        : 'https://api.resend.com/emails');
+      (this.provider === 'brevo' ? 'https://api.brevo.com/v3/smtp/email' : 'https://api.resend.com/emails');
     this.sender = parseSender(MAIL_FROM);
   }
 
@@ -131,7 +129,10 @@ export class HttpMailer extends Mailer {
         'content-type': 'application/json',
       },
       body: {
-        from: this.sender.name === this.sender.email ? this.sender.email : `${this.sender.name} <${this.sender.email}>`,
+        from:
+          this.sender.name === this.sender.email
+            ? this.sender.email
+            : `${this.sender.name} <${this.sender.email}>`,
         to: [message.to],
         subject: message.subject,
         html,
