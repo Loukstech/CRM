@@ -1,9 +1,12 @@
 import { Client } from 'pg';
 import {
+  API,
   type Session,
   type TestContext,
+  bearer,
   createRole,
   createTestContext,
+  http,
   invite,
   registerOwner,
   systemRoleId,
@@ -71,6 +74,34 @@ describe('Row Level Security (PostgreSQL, rôle applicatif)', () => {
     invitationTokenB = (
       await invite(ctx, ownerB, uniqueEmail('rls-b-inv'), await systemRoleId(ctx, ownerB, 'member'))
     ).token;
+
+    // Données métier de la phase 2.1 : sans elles, les tables `companies`,
+    // `contacts`, `tags` et `contact_tags` seraient vides et le test « un SELECT
+    // sans filtre ne renvoie que les lignes de A » passerait à vide.
+    for (const [label, session] of [
+      ['A', ownerA],
+      ['B', ownerB],
+    ] as const) {
+      const tag = await http(ctx)
+        .post(`${API}/tags`)
+        .set('authorization', bearer(session))
+        .send({ name: `Étiquette ${label}` })
+        .expect(201);
+      const company = await http(ctx)
+        .post(`${API}/companies`)
+        .set('authorization', bearer(session))
+        .send({ name: `Entreprise ${label}` })
+        .expect(201);
+      await http(ctx)
+        .post(`${API}/contacts`)
+        .set('authorization', bearer(session))
+        .send({
+          lastName: `Contact ${label}`,
+          companyId: (company.body as { id: string }).id,
+          tagIds: [(tag.body as { id: string }).id],
+        })
+        .expect(201);
+    }
   });
   afterAll(async () => {
     await app.end();

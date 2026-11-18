@@ -150,10 +150,14 @@ describe('RBAC', () => {
         .expect(403);
       expect(errorCode(escalation)).toBe('PRIVILEGE_ESCALATION');
 
+      // Un rôle que le recruteur couvre entièrement reste attribuable. On n'utilise
+      // pas le rôle système « membre » : depuis la phase 2.1 il porte des permissions
+      // de contacts que ce recruteur ne détient pas, donc il n'est plus couvert.
+      const juniorRole = await createRole(ctx, owner, 'Collaborateur', ['organization.view', 'members.view']);
       await http(ctx)
         .post(`${API}/invitations`)
         .set('authorization', bearer(recruiter))
-        .send({ email: uniqueEmail('new-member'), roleId: roles.member })
+        .send({ email: uniqueEmail('new-member'), roleId: juniorRole.id })
         .expect(201);
     });
 
@@ -293,7 +297,8 @@ describe('RBAC', () => {
       const unknown = await http(ctx)
         .post(`${API}/roles`)
         .set('authorization', bearer(owner))
-        .send({ name: 'Inconnu', permissions: [{ key: 'contacts.delete' }] })
+        // Clé volontairement inexistante au catalogue (ne pas réutiliser une clé réelle).
+        .send({ name: 'Inconnu', permissions: [{ key: 'contacts.archive' }] })
         .expect(400);
       expect(errorCode(unknown)).toBe('INVALID_PERMISSIONS');
 
