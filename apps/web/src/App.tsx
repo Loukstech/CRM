@@ -22,7 +22,7 @@ import {
 function Splash() {
   return (
     <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', gap: 12 }}>
-      <div className="brand__mark">T</div>
+      <div className="brand__mark">L</div>
       <span className="muted" style={{ fontSize: 12 }}>
         Chargement…
       </span>

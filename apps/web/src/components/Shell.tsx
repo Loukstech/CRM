@@ -39,9 +39,9 @@ const TITLES: Record<string, string> = {
 function Brand() {
   return (
     <div className="brand">
-      <span className="brand__mark">T</span>
+      <span className="brand__mark">L</span>
       <span className="brand__name">
-        Times<span>.</span>
+        Louk's<span> CRM</span>
       </span>
     </div>
   );
@@ -140,7 +140,7 @@ export function Shell() {
           ))}
         </nav>
         <div className="rail__foot">
-          Times CRM
+          Louk's CRM
           <br />
           Espace multi-tenant
         </div>
@@ -153,7 +153,7 @@ export function Shell() {
               <Menu size={20} />
             </button>
             <div className="topbar__crumb">
-              Espace <strong>{TITLES[location.pathname] ?? 'Times'}</strong>
+              Espace <strong>{TITLES[location.pathname] ?? "Louk's CRM"}</strong>
             </div>
           </div>
           <div className="topbar__right">

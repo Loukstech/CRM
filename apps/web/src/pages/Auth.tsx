@@ -21,9 +21,9 @@ function AuthLayout({
     <div className="auth">
       <aside className="auth__aside">
         <div className="brand">
-          <span className="brand__mark">T</span>
+          <span className="brand__mark">L</span>
           <span className="brand__name">
-            Times<span>.</span>
+            Louk's<span> CRM</span>
           </span>
         </div>
         <div>

@@ -56,7 +56,7 @@ export type Session = {
   organizations: Organization[];
 };
 
-const TOKEN_KEY = 'times.crm.tokens';
+const TOKEN_KEY = 'louks-crm.tokens';
 
 export const tokenStore = {
   read(): Tokens | null {
