@@ -20,6 +20,11 @@ export class RegisterDto {
   @IsPassword()
   password: string;
 
+  @ApiPropertyOptional({ description: 'Doit être identique au mot de passe.' })
+  @IsOptional()
+  @IsString()
+  confirmPassword?: string;
+
   @ApiProperty({ example: 'Ada Lovelace' })
   @IsDisplayName(200)
   name: string;

@@ -131,6 +131,7 @@ export function RegisterPage() {
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     organizationName: '',
     country: 'BJ',
     currency: 'XOF',
@@ -143,6 +144,10 @@ export function RegisterPage() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError('');
+    if (form.password !== form.confirmPassword) {
+      setError('Les mots de passe ne correspondent pas.');
+      return;
+    }
     setLoading(true);
     try {
       const session = await api.register(form);
@@ -193,6 +198,21 @@ export function RegisterPage() {
             minLength={12}
             value={form.password}
             onChange={(e) => set('password', e.target.value)}
+          />
+        </Field>
+        <Field
+          label="Confirmer le mot de passe"
+          htmlFor="reg-confirm-password"
+          hint="Retapez exactement le même mot de passe."
+        >
+          <Input
+            id="reg-confirm-password"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={12}
+            value={form.confirmPassword}
+            onChange={(e) => set('confirmPassword', e.target.value)}
           />
         </Field>
         <Field label="Nom de l'organisation" htmlFor="org">

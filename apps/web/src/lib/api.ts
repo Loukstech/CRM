@@ -150,6 +150,7 @@ export const api = {
   register: async (input: {
     email: string;
     password: string;
+    confirmPassword: string;
     name: string;
     organizationName: string;
     country: string;

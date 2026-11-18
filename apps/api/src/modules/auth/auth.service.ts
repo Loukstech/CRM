@@ -46,6 +46,9 @@ export class AuthService {
 
   /** Crée le compte, sa première organisation (dont il est propriétaire) et ouvre une session. */
   async register(dto: RegisterDto) {
+    if (dto.confirmPassword !== undefined && dto.confirmPassword !== dto.password) {
+      throw AppError.badRequest('PASSWORD_MISMATCH', 'Les mots de passe ne correspondent pas.');
+    }
     const email = normalizeEmail(dto.email);
     const passwordHash = await this.passwords.hash(dto.password);
     const userId = randomUUID();

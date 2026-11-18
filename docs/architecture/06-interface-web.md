@@ -5,7 +5,8 @@
 L'application web est une SPA React qui consomme l'API NestJS. Elle couvre pour l'instant le
 socle multi-tenant déjà livré :
 
-- connexion, inscription, vérification d'adresse, mot de passe oublié et réinitialisation ;
+- connexion, inscription (avec confirmation du mot de passe, vérifiée côté interface et côté API),
+  vérification d'adresse, mot de passe oublié et réinitialisation ;
 - vue d'ensemble (effectifs, rôles, invitations, activité récente) ;
 - équipe (liste, changement de rôle, retrait, invitation) ;
 - invitations en attente ;
