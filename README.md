@@ -3,11 +3,11 @@
 Monorepo de la plateforme CRM décrite dans le
 [cahier des charges](cahier_des_charges_CRM_SaaS.md).
 
-**État : phases 1a et 1b terminées — socle technique en ligne et interface web construite.** L'API
+**État : phases 1a et 1b terminées — socle technique en ligne et interface web déployée.** L'API
 gère l'authentification, les organisations, les membres, les rôles et l'audit, avec une isolation
-multi-tenant testée. Elle est déployée sur <https://crm.timestradinginter.com> (Render + Neon).
-Une application React consomme cette API en local (`npm run dev:web`). **Aucun module CRM (contacts,
-ventes, facturation…) n'existe encore**, ni application mobile.
+multi-tenant testée. L'interface **Louk's CRM** est servie sur <https://crm.timestradinginter.com>
+et consomme l'API sur <https://api-crm.timestradinginter.com> (Render + Neon). **Aucun module CRM
+(contacts, ventes, facturation…) n'existe encore**, ni application mobile.
 
 ## Ce qui fonctionne / ce qui n'existe pas
 
@@ -15,7 +15,7 @@ ventes, facturation…) n'existe encore**, ni application mobile.
 | --- | --- |
 | Inscription, connexion, déconnexion, rotation des jetons | Application mobile |
 | **Interface web React** : auth, équipe, invitations, rôles, audit, organisation | Modules CRM métier (contacts, ventes, facturation) |
-| Vérification d'e-mail et réinitialisation du mot de passe, avec pages dédiées dans le front | Déploiement du front : l'API occupe encore `crm.timestradinginter.com` |
+| Vérification d'e-mail et réinitialisation du mot de passe, avec pages dédiées dans le front | MFA, OAuth social |
 | Organisations, multi-appartenance, changement d'organisation active | MFA, OAuth social |
 | Invitations de membres, rôles système et personnalisés, permissions | Portées `OWN` / `TEAM` / `DEPARTMENT` appliquées à des données (phase 2) |
 | Isolation tenant : contexte serveur, filtres, Row Level Security, FK composites | Redis, files d'attente, workers, temps réel, stockage de fichiers |
@@ -44,8 +44,9 @@ npm run dev:web      # terminal 3 : interface web
 - API : <http://localhost:3000/api/v1>
 - Documentation interactive : <http://localhost:3000/api/docs>
 - Santé : <http://localhost:3000/api/v1/health/ready>
-- Interface web : <http://localhost:5173> — son proxy `/api` pointe vers l'API **en ligne**, donc pas
-  besoin de démarrer l'API locale pour l'utiliser. Voir [06-interface-web](docs/architecture/06-interface-web.md).
+- Interface web : <http://localhost:5173> — son proxy `/api` pointe vers l'API en ligne
+  (`api-crm.timestradinginter.com`), donc pas besoin de démarrer l'API locale pour l'utiliser. Voir
+  [06-interface-web](docs/architecture/06-interface-web.md).
 
 Pour tester les parcours par e-mail en local, le lien (et son jeton) apparaît dans la console de
 l'API sur une ligne `[E-MAIL NON ENVOYÉ — pilote "log"]`. Trois pilotes existent pour l'envoi réel
@@ -67,19 +68,22 @@ HTTPS Brevo/Resend). **Sur une instance Free de Render, `smtp` ne peut pas fonct
 
 ## Déploiement
 
-En ligne sur **<https://crm.timestradinginter.com>** — Render (API, plan Free) + Neon
-(PostgreSQL 16) + DNS Hostinger.
+En ligne avec une séparation nette des rôles — Render + Neon (PostgreSQL 16) + DNS Hostinger :
 
 | URL | Rôle |
 | --- | --- |
-| `/api/v1/health/ready` | Sonde de santé (utilisée par la plateforme) |
-| `/api/v1/health/live` | Vivacité |
-| `/api/docs` | Documentation OpenAPI interactive |
+| <https://crm.timestradinginter.com> | interface **Louk's CRM** (Render Static Site) |
+| <https://api-crm.timestradinginter.com/api/v1/health/ready> | sonde de santé de l'API |
+| <https://api-crm.timestradinginter.com/api/v1/health/live> | vivacité de l'API |
+| <https://api-crm.timestradinginter.com/api/docs> | documentation OpenAPI interactive |
 
 ```bash
-curl https://crm.timestradinginter.com/api/v1/health/ready
+curl https://api-crm.timestradinginter.com/api/v1/health/ready
 # {"status":"ok","checks":{"database":"ok"}}
 ```
+
+Le site statique déclare une réécriture `/* → /index.html` : les routes côté client comme
+`/verify-email?token=…` sont donc servies par l'application, et non plus renvoyées en `404`.
 
 La configuration est décrite dans [render.yaml](render.yaml) ; les variables d'environnement
 attendues sont listées dans [.env.production.example](.env.production.example).

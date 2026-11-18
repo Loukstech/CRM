@@ -1,9 +1,14 @@
-# Render Blueprint — API CRM (NestJS) + base PostgreSQL Neon.
+# Render Blueprint — API Louk's CRM (NestJS) + interface web (Vite/React) + base Neon.
 #
-# Etat reel du deploiement (service cree via l'API Render, pas via Blueprint) :
-#   - service web  : crm-api  -> https://crm-api-eogq.onrender.com
-#   - domaine      : https://crm.timestradinginter.com  (CNAME vers Render, gere chez Hostinger)
-#   - base         : Neon PostgreSQL 16 (projet dark-bird-33272139, region aws-us-west-2)
+# Etat reel du deploiement (services crees via l'API Render, pas via Blueprint) :
+#   - API  : crm-api       -> https://api-crm.timestradinginter.com
+#             (URL Render interne : https://crm-api-eogq.onrender.com)
+#   - Site : louks-crm-web -> https://crm.timestradinginter.com
+#             (URL Render interne : https://louks-crm-web.onrender.com)
+#   - Base : Neon PostgreSQL 16 (projet dark-bird-33272139, region aws-us-west-2)
+#
+# Le sous-domaine `crm.` porte l'interface, `api-crm.` porte l'API. Les deux CNAME
+# sont pilotés dans la zone Hostinger.
 #
 # Deux URL de connexion distinctes, c'est volontaire :
 #   DATABASE_URL           -> role crm_app     (LOGIN, NOSUPERUSER, NOBYPASSRLS) => la RLS est appliquee
@@ -86,3 +91,22 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+
+  # Interface web — SPA React/Vite. La règle de réécriture est indispensable :
+  # sans elle, /verify-email?token=... et les autres routes client renvoient 404.
+  - type: web
+    name: louks-crm-web
+    runtime: static
+    branch: workbuddy/main-7e0d91fb
+    rootDir: .
+    buildCommand: npm install && npm run build:web
+    staticPublishPath: apps/web/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
+      - key: VITE_API_BASE_URL
+        value: https://api-crm.timestradinginter.com

@@ -76,9 +76,10 @@ npm install
 npm run dev:web     # http://localhost:5173
 ```
 
-En développement, Vite proxifie `/api` vers `https://crm.timestradinginter.com`. L'API reçoit donc
+En développement, Vite proxifie `/api` vers `https://api-crm.timestradinginter.com`. L'API reçoit donc
 les appels comme s'ils venaient de son propre domaine : inutile d'ouvrir `CORS_ORIGINS` à
-`localhost`, et on travaille contre la base réelle.
+`localhost`, et on travaille contre la base réelle. En production, l'interface est servie sur
+`https://crm.timestradinginter.com` et `VITE_API_BASE_URL` pointe sur `api-crm.`.
 
 ```bash
 npm run build:web   # typecheck puis bundle de production dans apps/web/dist
@@ -93,13 +94,21 @@ Le compte créé lors de la phase 1b fonctionne : **`contact@timestradinginter.c
 passe provisoire a été communiqué hors du dépôt et n'est volontairement pas consigné ici.
 `emailVerified` est encore à `false` : le lien de vérification envoyé par e-mail pointe désormais sur
 `/verify-email?token=…`, une route **implémentée dans cette application** (elle répondait 404 avant).
-Ce mot de passe est provisoire et sera à changer dès que l'interface sera ouverte.
+Le site statique Render déclare une règle de réécriture `/* → /index.html`, sans laquelle cette URL
+profonde aurait continué à renvoyer 404 malgré la présence de la page dans le bundle. Ce mot de passe
+est provisoire et sera à changer dès que l'interface sera ouverte.
 
-## 6. Ce qui reste
+## 6. Déploiement en ligne
 
-- **Déployer le front** : le domaine `crm.timestradinginter.com` sert aujourd'hui l'API. Il faut
-  choisir entre un sous-domaine dédié (par exemple `app.`) avec un service statique, ou servir le
-  bundle depuis l'API sous `/` — et mettre `CORS_ORIGINS` / `APP_WEB_URL` à jour. Décision volontairement
-  laissée ouverte.
-- Éteindre Swagger une fois le front en ligne, Swagger étant aujourd'hui la seule autre interface.
+| URL | Rôle |
+| --- | --- |
+| `https://crm.timestradinginter.com` | interface Louk's CRM (Render Static Site `srv-dburvrqfngtc73dmlne0`) |
+| `https://api-crm.timestradinginter.com/api/v1` | API (Render Web Service `srv-dbrj68e7bikc73fu2sfg`) |
+| `https://api-crm.timestradinginter.com/api/docs` | Swagger, laissé actif pendant le développement |
+
+## 7. Ce qui reste
+
+- Éteindre Swagger (`SWAGGER_ENABLED=0`) **uniquement en fin de développement**, en même temps que la
+  rotation des secrets : il reste volontairement actif pour servir d'interface de test.
+- Changer le mot de passe provisoire de `contact@timestradinginter.com` au moment de l'ouverture.
 - Brancher les futurs modules métier sur la même charte (la structure de page est déjà en place).

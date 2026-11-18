@@ -7,6 +7,9 @@
   (AWS us-west-2), DNS Hostinger. Tout ce qui suit a été vérifié **sur l'environnement distant**,
   pas en local.
 
+> **Mise à jour 2026-11-18 :** `crm.` porte désormais l'interface web et `api-crm.` porte l'API.
+> Les sections 1, 4, 8 et 9 décrivent l'état initial ; voir la [section 12](#12-mise-à-jour-du-2026-11-18--séparation-site--api) pour la topologie actuelle.
+
 ## 1. Résultat
 
 L'API est accessible publiquement et répond correctement, sur un domaine propre :
@@ -285,3 +288,47 @@ c'est bien l'authentification DNS qui débloque l'envoi, pas la clé API.
 Déploiements correspondants : `dep-dbrkq2oae00c73ds3en0` (`render.yaml`),
 `dep-dbrkv2jl550s73coqk80` (mot de passe SMTP), `dep-dbrl48p7lnhs73dcl6dg` (pilote HTTP),
 `dep-dbrlfa0n74is739757pg` (bascule vers Brevo) — tous terminés en `live`.
+
+## 12. Mise à jour du 2026-11-18 — séparation site / API
+
+Le choix retenu par le user est **`crm.` = interface, `api-crm.` = API**. Le domaine `crm.`
+avait été créé à l'origine pour porter le site, pas l'API : la topologie décrite aux sections 1 et 4
+ci-dessus n'est donc plus d'actualité.
+
+| URL | Service Render | Identifiant |
+| --- | --- | --- |
+| `https://crm.timestradinginter.com` | Static Site `louks-crm-web` | `srv-dburvrqfngtc73dmlne0` |
+| `https://api-crm.timestradinginter.com` | Web Service `crm-api` | `srv-dbrj68e7bikc73fu2sfg` |
+
+Enregistrements DNS Hostinger (zone `timestradinginter.com`, pilotée par API) :
+
+```text
+crm       CNAME  louks-crm-web.onrender.com.
+api-crm   CNAME  crm-api-eogq.onrender.com.
+```
+
+Les variables d'environnement de l'API ont été alignées :
+`CORS_ORIGINS=https://crm.timestradinginter.com`,
+`APP_WEB_URL=https://crm.timestradinginter.com`. Le site statique reçoit
+`VITE_API_BASE_URL=https://api-crm.timestradinginter.com`. `SWAGGER_ENABLED` reste à `1` jusqu'à la
+phase finale : aucun durcissement de sécurité n'est appliqué pendant le développement.
+
+**Piège Render.** Le plan Free n'autorise que ** deux domaines personnalisés ** par espace de
+travail. Tant que `crm.` était encore rattaché à l'API, l'ajout du même domaine au site statique
+échouait avec `400 — a payment method is required to add more than 2 custom domains`. Il a fallu
+supprimer l'ancien domaine de l'API (`cdm-dbrj6a61egvs739kjsh0`) avant de le déclarer sur le site.
+
+**Piège SPA.** Un site statique Render ne réécrit pas les chemins inconnus vers `index.html` par
+défaut : `/verify-email?token=…` renvoyait donc `404` alors même que la page existait dans le
+bundle. L'API Render de création accepte un champ `serviceDetails.routes`, mais la mise à jour
+(`PATCH`) d'un site existant ne le prend pas en charge. Le site a donc été recréé avec :
+
+```yaml
+routes:
+  - type: rewrite
+    source: /*
+    destination: /index.html
+```
+
+Le lien de vérification par e-mail est désormais fonctionnel de bout en bout. Les secrets n'ont pas
+été touchés lors de cette migration.
