@@ -92,8 +92,9 @@ services:
       - key: MAIL_FROM
         sync: false
 
-  # Interface web — SPA React/Vite. La règle de réécriture est indispensable :
-  # sans elle, /verify-email?token=... et les autres routes client renvoient 404.
+  # Interface web — SPA React/Vite. Le build génère dist/404.html comme copie de
+  # dist/index.html : les routes côté client (/verify-email?token=…) ne renvoient
+  # plus une page d'erreur vide même sans règle de réécriture côté plateforme.
   - type: web
     name: louks-crm-web
     runtime: static
@@ -101,10 +102,6 @@ services:
     rootDir: .
     buildCommand: npm install && npm run build:web
     staticPublishPath: apps/web/dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
     envVars:
       - key: NPM_CONFIG_PRODUCTION
         value: "false"

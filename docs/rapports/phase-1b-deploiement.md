@@ -297,7 +297,7 @@ ci-dessus n'est donc plus d'actualité.
 
 | URL | Service Render | Identifiant |
 | --- | --- | --- |
-| `https://crm.timestradinginter.com` | Static Site `louks-crm-web` | `srv-dburvrqfngtc73dmlne0` |
+| `https://crm.timestradinginter.com` | Static Site `louks-crm-web` | `srv-dbus2tuk1f9s73b6oflg` |
 | `https://api-crm.timestradinginter.com` | Web Service `crm-api` | `srv-dbrj68e7bikc73fu2sfg` |
 
 Enregistrements DNS Hostinger (zone `timestradinginter.com`, pilotée par API) :
@@ -320,15 +320,12 @@ supprimer l'ancien domaine de l'API (`cdm-dbrj6a61egvs739kjsh0`) avant de le dé
 
 **Piège SPA.** Un site statique Render ne réécrit pas les chemins inconnus vers `index.html` par
 défaut : `/verify-email?token=…` renvoyait donc `404` alors même que la page existait dans le
-bundle. L'API Render de création accepte un champ `serviceDetails.routes`, mais la mise à jour
-(`PATCH`) d'un site existant ne le prend pas en charge. Le site a donc été recréé avec :
+bundle. Deux pistes ont été écartées après essai réel : un fichier `_redirects` (ignoré par Render)
+et le champ `serviceDetails.routes` de l'API de création (la règle `/* → /index.html` cassait la
+racine et les assets, `/* → /` laissait la racine en 404). La solution retenue est générique et ne
+dépend pas de la plateforme : le script `apps/web/scripts/copy-404.mjs` copie `dist/index.html` vers
+`dist/404.html` à chaque build. Le serveur statique sert donc l'application sur les chemins inconnus,
+et React Router prend le relais.
 
-```yaml
-routes:
-  - type: rewrite
-    source: /*
-    destination: /index.html
-```
-
-Le lien de vérification par e-mail est désormais fonctionnel de bout en bout. Les secrets n'ont pas
-été touchés lors de cette migration.
+Le lien de vérification par e-mail est ainsi exploitable de bout en bout. Les secrets n'ont pas été
+touchés lors de cette migration.

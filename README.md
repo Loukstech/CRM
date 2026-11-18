@@ -82,8 +82,9 @@ curl https://api-crm.timestradinginter.com/api/v1/health/ready
 # {"status":"ok","checks":{"database":"ok"}}
 ```
 
-Le site statique déclare une réécriture `/* → /index.html` : les routes côté client comme
-`/verify-email?token=…` sont donc servies par l'application, et non plus renvoyées en `404`.
+Le build génère `404.html` comme copie de `index.html` : les routes côté client comme
+`/verify-email?token=…` sont donc prises en charge par l'application, sans dépendre d'une règle de
+réécriture propre à l'hébergeur.
 
 La configuration est décrite dans [render.yaml](render.yaml) ; les variables d'environnement
 attendues sont listées dans [.env.production.example](.env.production.example).

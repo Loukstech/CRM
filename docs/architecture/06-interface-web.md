@@ -94,15 +94,15 @@ Le compte créé lors de la phase 1b fonctionne : **`contact@timestradinginter.c
 passe provisoire a été communiqué hors du dépôt et n'est volontairement pas consigné ici.
 `emailVerified` est encore à `false` : le lien de vérification envoyé par e-mail pointe désormais sur
 `/verify-email?token=…`, une route **implémentée dans cette application** (elle répondait 404 avant).
-Le site statique Render déclare une règle de réécriture `/* → /index.html`, sans laquelle cette URL
-profonde aurait continué à renvoyer 404 malgré la présence de la page dans le bundle. Ce mot de passe
-est provisoire et sera à changer dès que l'interface sera ouverte.
+Le build génère `dist/404.html` comme copie de `dist/index.html`, afin que les routes côté client
+restent exploitables même si l'hébergeur ne réécrit pas les chemins inconnus. Ce mot de passe est
+provisoire et sera à changer dès que l'interface sera ouverte.
 
 ## 6. Déploiement en ligne
 
 | URL | Rôle |
 | --- | --- |
-| `https://crm.timestradinginter.com` | interface Louk's CRM (Render Static Site `srv-dburvrqfngtc73dmlne0`) |
+| `https://crm.timestradinginter.com` | interface Louk's CRM (Render Static Site `srv-dbus2tuk1f9s73b6oflg`) |
 | `https://api-crm.timestradinginter.com/api/v1` | API (Render Web Service `srv-dbrj68e7bikc73fu2sfg`) |
 | `https://api-crm.timestradinginter.com/api/docs` | Swagger, laissé actif pendant le développement |
 
