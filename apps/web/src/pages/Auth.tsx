@@ -437,8 +437,7 @@ export function AcceptInvitationPage() {
   });
   const [phase, setPhase] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState('');
-  const set = (key: keyof typeof form, value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  const set = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
 
   useEffect(() => {
     if (!token) {

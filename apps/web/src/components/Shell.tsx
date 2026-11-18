@@ -4,11 +4,13 @@ import {
   Building2,
   Check,
   ChevronDown,
+  Contact,
   LayoutDashboard,
   LogOut,
   Mail,
   Menu,
   ScrollText,
+  Settings2,
   ShieldCheck,
   Users,
   X,
@@ -20,15 +22,19 @@ import '../styles/app.css';
 
 const NAV = [
   { to: '/', label: 'Vue d’ensemble', icon: LayoutDashboard, end: true },
+  { to: '/contacts', label: 'Contacts', icon: Contact, end: false },
+  { to: '/entreprises', label: 'Entreprises', icon: Building2, end: false },
   { to: '/equipe', label: 'Équipe', icon: Users, end: false },
   { to: '/invitations', label: 'Invitations', icon: Mail, end: false },
   { to: '/acces', label: 'Rôles & accès', icon: ShieldCheck, end: false },
   { to: '/audit', label: 'Journal d’activité', icon: ScrollText, end: false },
-  { to: '/organisation', label: 'Organisation', icon: Building2, end: false },
+  { to: '/organisation', label: 'Organisation', icon: Settings2, end: false },
 ];
 
 const TITLES: Record<string, string> = {
   '/': 'Vue d’ensemble',
+  '/contacts': 'Contacts',
+  '/entreprises': 'Entreprises',
   '/equipe': 'Équipe',
   '/invitations': 'Invitations',
   '/acces': 'Rôles & accès',

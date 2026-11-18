@@ -1,8 +1,9 @@
 // Schéma Prisma — CRM SaaS
 //
-// Périmètre actuel : PHASE 1 (identité, organisations, memberships, RBAC, audit).
-// Les tables des modules métier (contacts, deals, factures…) sont décrites dans
-// docs/architecture/03-modele-de-donnees-erd.md et seront ajoutées au schéma
+// Périmètre actuel : PHASE 1 (identité, organisations, memberships, RBAC, audit)
+// + PHASE 2.1 (entreprises, contacts, étiquettes).
+// Les tables des modules suivants (opportunités, devis, factures…) sont décrites
+// dans docs/architecture/03-modele-de-donnees-erd.md et seront ajoutées au schéma
 // dans la migration de leur phase, jamais avant.
 //
 // Règles à respecter pour TOUTE nouvelle table appartenant à un tenant :
@@ -61,6 +62,14 @@ enum InvitationStatus {
 enum UserTokenType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
+}
+
+/// Étape du cycle de vie d'un contact dans le portefeuille commercial.
+enum ContactStatus {
+  LEAD
+  PROSPECT
+  CUSTOMER
+  INACTIVE
 }
 
 // ─────────────────── Identité (tables globales, hors tenant) ───────────────────
@@ -183,6 +192,9 @@ model Organization {
   invitations Invitation[]
   auditLogs   AuditLog[]
   sessions    Session[]
+  companies   Company[]
+  contacts    Contact[]
+  tags        Tag[]
 
   @@map("organizations")
 }
@@ -239,6 +251,9 @@ model Membership {
   // FK composite : impossible d'affecter le rôle d'une autre organisation.
   role         Role         @relation(fields: [organizationId, roleId], references: [organizationId, id], onDelete: Restrict)
 
+  ownedCompanies Company[] @relation("CompanyOwner")
+  ownedContacts  Contact[] @relation("ContactOwner")
+
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
   @@index([userId])
@@ -292,4 +307,112 @@ model AuditLog {
   @@index([organizationId, entityType, entityId])
   @@index([actorUserId])
   @@map("audit_logs")
+}
+
+// ───────────────── Phase 2.1 : entreprises, contacts, étiquettes ─────────────────
+
+/// Entreprise cliente ou prospect. Suppression logique : un contact, puis plus
+/// tard une opportunité ou une facture, peut encore y faire référence.
+model Company {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String    @map("organization_id") @db.Uuid
+  name              String    @db.VarChar(200)
+  /// Domaine internet normalisé (minuscules, sans schéma ni « www. »).
+  domain            String?   @db.VarChar(255)
+  industry          String?   @db.VarChar(100)
+  phone             String?   @db.VarChar(40)
+  website           String?   @db.VarChar(2048)
+  addressLine       String?   @map("address_line") @db.VarChar(255)
+  city              String?   @db.VarChar(120)
+  /// ISO 3166-1 alpha-2
+  country           String?   @db.VarChar(2)
+  notes             String?   @db.Text
+  ownerMembershipId String?   @map("owner_membership_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  // FK composite : le propriétaire est un membre de LA MÊME organisation.
+  // onDelete Restrict : le retrait d'un membre détache ses entreprises dans la
+  // même transaction (une FK composite ne peut pas porter SET NULL).
+  owner        Membership?  @relation("CompanyOwner", fields: [organizationId, ownerMembershipId], references: [organizationId, id], onDelete: Restrict)
+  contacts     Contact[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, name])
+  @@index([organizationId, ownerMembershipId])
+  @@map("companies")
+}
+
+/// Personne physique suivie par l'organisation.
+model Contact {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String        @map("organization_id") @db.Uuid
+  firstName         String?       @map("first_name") @db.VarChar(100)
+  lastName          String?       @map("last_name") @db.VarChar(100)
+  /// Conservé tel que saisi côté affichage, normalisé (minuscules) pour la recherche.
+  email             String?       @db.VarChar(320)
+  phone             String?       @db.VarChar(40)
+  jobTitle          String?       @map("job_title") @db.VarChar(120)
+  companyId         String?       @map("company_id") @db.Uuid
+  status            ContactStatus @default(LEAD)
+  /// Origine déclarée : saisie manuelle, import, formulaire, référence…
+  source            String?       @db.VarChar(80)
+  notes             String?       @db.Text
+  ownerMembershipId String?       @map("owner_membership_id") @db.Uuid
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  // FK composite : impossible de rattacher un contact à l'entreprise d'un autre tenant.
+  company      Company?     @relation(fields: [organizationId, companyId], references: [organizationId, id], onDelete: Restrict)
+  owner        Membership?  @relation("ContactOwner", fields: [organizationId, ownerMembershipId], references: [organizationId, id], onDelete: Restrict)
+  tags         ContactTag[]
+
+  // CHECK (first_name IS NOT NULL OR last_name IS NOT NULL) : migration SQL.
+  @@unique([organizationId, id])
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, status])
+  @@index([organizationId, companyId])
+  @@index([organizationId, ownerMembershipId])
+  @@index([organizationId, email])
+  @@map("contacts")
+}
+
+/// Étiquette libre, propre à une organisation (renommable et colorable).
+model Tag {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(60)
+  /// Couleur d'affichage au format #rrggbb.
+  color          String   @default("#64748b") @db.VarChar(7)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contacts     ContactTag[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+  @@map("tags")
+}
+
+/// Jointure contact ↔ étiquette. Les deux FK sont composites : la base refuse
+/// de relier un contact et une étiquette d'organisations différentes.
+model ContactTag {
+  organizationId String   @map("organization_id") @db.Uuid
+  contactId      String   @map("contact_id") @db.Uuid
+  tagId          String   @map("tag_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  contact Contact @relation(fields: [organizationId, contactId], references: [organizationId, id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [organizationId, tagId], references: [organizationId, id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+  @@index([organizationId])
+  @@index([tagId])
+  @@map("contact_tags")
 }

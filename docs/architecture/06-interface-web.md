@@ -13,10 +13,12 @@ socle multi-tenant déjà livré :
   ou création de compte) ;
 - rôles et catalogue des permissions ;
 - journal d'activité ;
-- profil de l'organisation active et changement d'organisation.
+- profil de l'organisation active et changement d'organisation ;
+- **contacts** : liste filtrable, recherche, fiche latérale de création et d'édition, étiquettes ;
+- **entreprises** : liste, création et édition en modale, comptage des contacts rattachés.
 
-Les modules CRM métier (contacts, ventes, facturation) ne sont pas encore dans l'interface, puisqu'ils
-n'existent pas encore dans l'API.
+Les modules suivants (opportunités, devis, facturation, campagnes) ne sont pas encore dans
+l'interface, puisqu'ils n'existent pas encore dans l'API.
 
 ## 2. Identité visuelle
 
@@ -63,9 +65,11 @@ apps/web/
     components/
       Shell.tsx               rail, barre supérieure, sélecteur d'organisation
       ui.tsx                  boutons, champs, cartes, badges, modale, toasts
+      Async.tsx               chargement asynchrone et états chargement / erreur
     pages/
       Auth.tsx                connexion, inscription, vérification, mot de passe
-      App.tsx                 écrans de l'espace de travail
+      App.tsx                 vue d'ensemble, équipe, invitations, rôles, audit, organisation
+      Crm.tsx                 contacts, entreprises, étiquettes
     styles/                   tokens, global, ui, auth, app
 ```
 
@@ -125,9 +129,51 @@ La **création d'une organisation supplémentaire** existe côté API (`POST /or
 pas encore d'écran dédié : pour l'instant, la première organisation est créée à l'inscription, et
 les suivantes s'obtiennent par invitation.
 
-## 8. Ce qui reste
+## 8. Contacts et entreprises (phase 2.1)
+
+Deux écrans ont été ajoutés au rail, sous « Espace de travail ».
+
+**Contacts** (`/#/contacts`)
+
+- barre de filtres : recherche plein texte (nom, prénom, e-mail, téléphone, fonction, entreprise),
+  statut, entreprise, étiquette — la recherche est temporisée à 300 ms ;
+- tableau paginé par curseur (« Charger plus »), avec personne, entreprise, statut, étiquettes,
+  propriétaire et date de création ;
+- fiche en **panneau latéral** (et non en page séparée) : on garde la liste en contexte. Le panneau
+  s'ouvre au clic sur une ligne ou au clavier (Entrée / Espace), se ferme avec `Échap` ;
+- le pied du panneau reste visible pendant que le formulaire défile ;
+- suppression avec confirmation explicite ; la fiche sort des listes mais reste en base
+  (suppression logique).
+
+**Entreprises** (`/#/entreprises`)
+
+- liste avec recherche, secteur, ville et nombre de contacts actifs ;
+- création et édition en modale, avec pied de modale fixe ;
+- la suppression est refusée tant que des contacts actifs y sont rattachés (code `COMPANY_IN_USE`).
+
+**Étiquettes**
+
+Gérées depuis un bouton de l'en-tête des contacts (visible avec `tags.manage`) : création avec
+couleur, renommage en place, recoloration, suppression. Une étiquette supprimée est retirée de tous
+les contacts (cascade en base).
+
+Les actions sont masquées quand la permission manque : `contacts.create`, `contacts.update`,
+`contacts.delete`, `companies.manage`, `tags.manage`. Le masquage est un confort — l'API refuse de
+toute façon l'action.
+
+### Comportement mobile
+
+Sous 620 px, l'en-tête de page passe en colonne, les filtres s'empilent, le tableau défile
+horizontalement dans sa carte et le panneau de fiche occupe toute la largeur. Les enfants de
+`.content` reçoivent `min-width: 0` : sans cela, un tableau large élargit la page entière et fait
+apparaître un défilement horizontal au niveau du document.
+
+## 9. Ce qui reste
 
 - Éteindre Swagger (`SWAGGER_ENABLED=0`) **uniquement en fin de développement**, en même temps que la
   rotation des secrets : il reste volontairement actif pour servir d'interface de test.
 - Changer le mot de passe provisoire de `contact@timestradinginter.com` au moment de l'ouverture.
 - Brancher les futurs modules métier sur la même charte (la structure de page est déjà en place).
+- Écran de création d'une organisation supplémentaire (l'API `POST /organizations` existe).
+- Gestion du profil : changement de mot de passe, liste et révocation de ses sessions.
+- Import / export CSV des contacts, détection de doublons (lots 2.3 et 2.4).

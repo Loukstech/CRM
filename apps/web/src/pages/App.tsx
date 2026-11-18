@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { ArrowDown, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { api, errorMessage, type AuditEntry, type Invitation, type Member, type Page } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { State, useLoad } from '../components/Async';
 import {
   Badge,
   Button,
@@ -14,31 +15,6 @@ import {
   Select,
   useToast,
 } from '../components/ui';
-
-function useLoad<T>(loader: () => Promise<T>, deps: unknown[] = []) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const load = useCallback(loader, deps);
-  const reload = useCallback(() => {
-    setLoading(true);
-    load()
-      .then(setData)
-      .catch((cause: unknown) => setError(errorMessage(cause)))
-      .finally(() => setLoading(false));
-  }, [load]);
-  useEffect(() => {
-    reload();
-  }, [reload]);
-  return { data, loading, error, reload };
-}
-
-function State({ loading, error, children }: { loading: boolean; error: string; children: ReactNode }) {
-  if (loading) return <Card className="card__body muted">Chargement…</Card>;
-  if (error) return <Card className="card__body auth__alert">{error}</Card>;
-  return <>{children}</>;
-}
 
 function dateOf(value: string) {
   return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(

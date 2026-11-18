@@ -7,6 +7,7 @@ import { APP_CONFIG, type AppConfig } from './config/env';
 import { DatabaseModule } from './database/database.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CrmModule } from './modules/crm/crm.module';
 import { HealthModule } from './modules/health/health.controller';
 import { MailModule } from './modules/mail/mail.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
@@ -31,6 +32,7 @@ import { RolesModule } from './modules/roles/roles.controller';
     OrganizationsModule,
     MembershipsModule,
     RolesModule,
+    CrmModule,
     HealthModule,
   ],
   // Limitation de débit globale ; AccessGuard (authentification + permissions)

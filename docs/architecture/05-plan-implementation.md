@@ -22,8 +22,10 @@ Un module n'est déclaré terminé que si :
 | --- | --- | --- |
 | 0 | Analyse, architecture, ERD, décisions | ✅ fait (documents 01 à 05, ADR) |
 | 1a | Monorepo, schéma, migrations, auth, organisations, membres, RBAC, audit, tests d'isolation | ✅ fait — [rapport](../rapports/phase-1a-fondations.md) |
-| 1b | Finition des fondations (voir ci-dessous) | ⏳ à valider |
-| 2 → 11 | Modules métier, mobile, durcissement | 🟡 non commencé |
+| 1b | Finition des fondations (voir ci-dessous) | ✅ fait — interface en ligne, invitations, e-mails |
+| 2 | Contacts, entreprises, étiquettes (**lot 2.1**) | ✅ fait — [démarrage](../rapports/phase-2-demarrage.md) |
+| 2 (suite) | Import/export, doublons, équipes, champs personnalisés, leads | 🟡 lots 2.3 à 2.8 |
+| 3 → 11 | Modules métier, mobile, durcissement | 🟡 non commencé |
 
 ## Phase 1b — Finition des fondations (proposée)
 
@@ -45,7 +47,7 @@ Durées indicatives du cahier (§11), pour une équipe ; à réévaluer après l
 
 | Phase | Périmètre | Points d'attention | Version |
 | --- | --- | --- | --- |
-| 2 | Équipes, départements, **portées RBAC appliquées** ; contacts, entreprises, tags, notes, champs personnalisés, import/export CSV-XLSX, doublons et fusion, leads et conversion ; stockage de fichiers | Premier module à propriétaire : c'est ici que `OWN`/`TEAM`/`DEPARTMENT` deviennent réels. Décision A12 (unicité e-mail) | Alpha |
+| 2 | Équipes, départements, **portées RBAC appliquées** ; contacts, entreprises, tags, notes, champs personnalisés, import/export CSV-XLSX, doublons et fusion, leads et conversion ; stockage de fichiers | Premier module à propriétaire : c'est ici que `OWN`/`TEAM`/`DEPARTMENT` deviennent réels. Décision A12 (unicité e-mail). **Lot 2.1 livré** : `OWN` et `ORGANIZATION` effectives sur les contacts et les entreprises ; `TEAM`/`DEPARTMENT` traitées comme `OWN` jusqu'au lot 2.5 | Alpha |
 | 3 | Pipelines, étapes, opportunités, historique, prévisions ; activités, tâches, calendrier interne ; dashboard de base | Montants en `NUMERIC` + devise ; KPI calculés côté serveur dans le périmètre d'accès | Alpha |
 | 4 | Produits, devis, factures, paiements partiels | Transactions, numérotation sans trou, `Idempotency-Key`, journal non destructif. Règles fiscales par pays à fournir (§15) | Beta |
 | 5 | Marketing : segments, modèles, campagnes e-mail, consentements, désinscription | Exclusion automatique des opposés ; ouvertures présentées comme approximatives | Beta |

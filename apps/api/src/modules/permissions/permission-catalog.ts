@@ -32,6 +32,16 @@ export const PERMISSIONS = [
   { key: 'roles.view', description: 'Consulter les rôles et leurs permissions', scoped: false },
   { key: 'roles.manage', description: 'Créer, modifier et supprimer des rôles personnalisés', scoped: false },
   { key: 'audit.view', description: "Consulter le journal d'audit de l'organisation", scoped: false },
+  // Phase 2.1 — contacts, entreprises, étiquettes.
+  // `scoped: true` : ces permissions portent sur des ressources qui ont un
+  // propriétaire (membership), donc les portées OWN → ORGANIZATION s'appliquent.
+  { key: 'contacts.view', description: 'Consulter les contacts', scoped: true },
+  { key: 'contacts.create', description: 'Créer des contacts', scoped: true },
+  { key: 'contacts.update', description: 'Modifier les contacts', scoped: true },
+  { key: 'contacts.delete', description: 'Supprimer des contacts', scoped: true },
+  { key: 'companies.view', description: 'Consulter les entreprises', scoped: true },
+  { key: 'companies.manage', description: 'Créer, modifier et supprimer des entreprises', scoped: true },
+  { key: 'tags.manage', description: 'Créer, renommer et supprimer les étiquettes', scoped: false },
 ] as const satisfies readonly PermissionDefinition[];
 
 export type PermissionKey = (typeof PERMISSIONS)[number]['key'];
@@ -72,7 +82,16 @@ export const SYSTEM_ROLES: readonly SystemRoleDefinition[] = [
     key: 'member',
     name: 'Membre',
     description: 'Accès de base en lecture à l’organisation et à ses membres.',
-    permissions: ['organization.view', 'members.view', 'roles.view'],
+    permissions: [
+      'organization.view',
+      'members.view',
+      'roles.view',
+      'contacts.view',
+      'contacts.create',
+      'contacts.update',
+      'companies.view',
+      'companies.manage',
+    ],
   },
 ];
 

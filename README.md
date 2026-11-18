@@ -3,21 +3,23 @@
 Monorepo de la plateforme CRM décrite dans le
 [cahier des charges](cahier_des_charges_CRM_SaaS.md).
 
-**État : phases 1a et 1b terminées — socle technique en ligne et interface web déployée.** L'API
-gère l'authentification, les organisations, les membres, les rôles et l'audit, avec une isolation
-multi-tenant testée. L'interface **Louk's CRM** est servie sur <https://crm.timestradinginter.com>
-et consomme l'API sur <https://api-crm.timestradinginter.com> (Render + Neon). **Aucun module CRM
-(contacts, ventes, facturation…) n'existe encore**, ni application mobile.
+**État : phases 1a, 1b et lot 2.1 terminés.** L'API gère l'authentification, les organisations, les
+membres, les rôles, l'audit, et le premier module métier : **contacts, entreprises et étiquettes**,
+avec les portées `OWN` et `ORGANIZATION` réellement appliquées. L'interface **Louk's CRM** est servie
+sur <https://crm.timestradinginter.com> et consomme l'API sur
+<https://api-crm.timestradinginter.com> (Render + Neon). Les modules ventes et facturation n'existent
+pas encore, ni l'application mobile.
 
 ## Ce qui fonctionne / ce qui n'existe pas
 
 | Fonctionne (implémenté et testé) | N'existe pas encore |
 | --- | --- |
 | Inscription, connexion, déconnexion, rotation des jetons | Application mobile |
-| **Interface web React** : auth, équipe, invitations, rôles, audit, organisation | Modules CRM métier (contacts, ventes, facturation) |
+| **Interface web React** : auth, contacts, entreprises, équipe, invitations, rôles, audit, organisation | Ventes, devis, facturation, campagnes, support |
 | Vérification d'e-mail et réinitialisation du mot de passe, avec pages dédiées dans le front | MFA, OAuth social |
 | Organisations, multi-appartenance, changement d'organisation active | MFA, OAuth social |
-| Invitations de membres, rôles système et personnalisés, permissions | Portées `OWN` / `TEAM` / `DEPARTMENT` appliquées à des données (phase 2) |
+| Invitations de membres, rôles système et personnalisés, permissions | Portées `TEAM` / `DEPARTMENT` appliquées (lot 2.5 ; en attendant elles retombent sur `OWN`) |
+| **Contacts, entreprises, étiquettes** : CRUD, recherche, filtres, pagination, propriétaire, audit | Import/export CSV, fusion de doublons, champs personnalisés, leads |
 | Isolation tenant : contexte serveur, filtres, Row Level Security, FK composites | Redis, files d'attente, workers, temps réel, stockage de fichiers |
 | Journal d'audit en ajout seul | Console Super Admin, abonnements, quotas |
 | Limitation de débit (en mémoire, une seule instance) | Sauvegardes de la base, supervision, alertes |

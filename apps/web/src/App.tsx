@@ -19,6 +19,7 @@ import {
   OrganizationPage,
   TeamPage,
 } from './pages/App';
+import { CompaniesPage, ContactsPage } from './pages/Crm';
 
 function Splash() {
   return (
@@ -73,6 +74,8 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route element={<Protected />}>
               <Route path="/" element={<DashboardPage />} />
+              <Route path="/contacts" element={<ContactsPage />} />
+              <Route path="/entreprises" element={<CompaniesPage />} />
               <Route path="/equipe" element={<TeamPage />} />
               <Route path="/invitations" element={<InvitationsPage />} />
               <Route path="/acces" element={<AccessPage />} />

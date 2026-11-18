@@ -23,3 +23,6 @@ Thumbs.db
 
 # Snapshots de navigation
 .playwright-cli/
+
+# Captures de vérification locale
+/shots/

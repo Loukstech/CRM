@@ -227,7 +227,39 @@ export const api = {
     apiFetch<Page<AuditEntry>>(
       `/audit-logs?limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
     ),
+
+  // ── Contacts, entreprises, étiquettes ────────────────────────────────────
+  listContacts: (query: ContactQuery = {}) => apiFetch<Page<Contact>>(`/contacts${toQueryString(query)}`),
+  getContact: (id: string) => apiFetch<Contact>(`/contacts/${id}`),
+  createContact: (data: ContactInput) => apiFetch<Contact>('/contacts', body(data)),
+  updateContact: (id: string, data: Partial<ContactInput>) =>
+    apiFetch<Contact>(`/contacts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteContact: (id: string) => apiFetch<void>(`/contacts/${id}`, { method: 'DELETE' }),
+
+  listCompanies: (query: { q?: string; limit?: number; cursor?: string; sort?: string } = {}) =>
+    apiFetch<Page<Company>>(`/companies${toQueryString(query)}`),
+  createCompany: (data: CompanyInput) => apiFetch<Company>('/companies', body(data)),
+  updateCompany: (id: string, data: Partial<CompanyInput>) =>
+    apiFetch<Company>(`/companies/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteCompany: (id: string) => apiFetch<void>(`/companies/${id}`, { method: 'DELETE' }),
+
+  listTags: (withCount = false) => apiFetch<CompanyTag[]>(`/tags${withCount ? '?withCount=true' : ''}`),
+  createTag: (data: { name: string; color?: string }) => apiFetch<CompanyTag>('/tags', body(data)),
+  updateTag: (id: string, data: { name?: string; color?: string }) =>
+    apiFetch<CompanyTag>(`/tags/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteTag: (id: string) => apiFetch<void>(`/tags/${id}`, { method: 'DELETE' }),
 };
+
+/** Sérialise les paramètres non vides ; ignore `undefined`, `null` et chaîne vide. */
+function toQueryString(query: Record<string, string | number | boolean | undefined | null>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === '') continue;
+    params.set(key, String(value));
+  }
+  const search = params.toString();
+  return search ? `?${search}` : '';
+}
 
 export type Page<T> = { items: T[]; nextCursor?: string | null };
 export type Member = {
@@ -265,6 +297,105 @@ export type AuditEntry = {
   ip: string | null;
   createdAt: string;
 };
+
+// ── CRM : contacts, entreprises, étiquettes ────────────────────────────────
+
+export type ContactStatus = 'LEAD' | 'PROSPECT' | 'CUSTOMER' | 'INACTIVE';
+
+export const CONTACT_STATUS_LABELS: Record<ContactStatus, string> = {
+  LEAD: 'Piste',
+  PROSPECT: 'Prospect',
+  CUSTOMER: 'Client',
+  INACTIVE: 'Inactif',
+};
+
+export type CompanyTag = {
+  id: string;
+  name: string;
+  color: string;
+  createdAt?: string;
+  _count?: { contacts: number };
+};
+
+export type CompanySummary = { id: string; name: string };
+
+export type Company = {
+  id: string;
+  name: string;
+  domain: string | null;
+  industry: string | null;
+  phone: string | null;
+  website: string | null;
+  addressLine: string | null;
+  city: string | null;
+  country: string | null;
+  notes: string | null;
+  ownerMembershipId: string | null;
+  contactCount: number;
+  createdAt: string;
+  updatedAt: string;
+  owner: { id: string; user: { id: string; name: string; email: string } } | null;
+};
+
+export type Contact = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  jobTitle: string | null;
+  companyId: string | null;
+  status: ContactStatus;
+  source: string | null;
+  notes: string | null;
+  ownerMembershipId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  company: CompanySummary | null;
+  owner: { id: string; user: { id: string; name: string; email: string } } | null;
+  tags: CompanyTag[];
+};
+
+export type ContactInput = {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  jobTitle?: string | null;
+  companyId?: string | null;
+  status?: ContactStatus;
+  source?: string | null;
+  notes?: string | null;
+  tagIds?: string[];
+};
+
+export type CompanyInput = {
+  name: string;
+  domain?: string | null;
+  industry?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  addressLine?: string | null;
+  city?: string | null;
+  country?: string | null;
+  notes?: string | null;
+};
+
+export type ContactQuery = {
+  q?: string;
+  status?: ContactStatus | '';
+  companyId?: string;
+  tagId?: string;
+  sort?: 'recent' | 'name';
+  limit?: number;
+  cursor?: string;
+};
+
+/** « Prénom Nom », ou à défaut ce qui identifie la personne. */
+export function contactName(contact: Pick<Contact, 'firstName' | 'lastName' | 'email'>): string {
+  const full = [contact.firstName, contact.lastName].filter(Boolean).join(' ').trim();
+  return full || contact.email || 'Contact sans nom';
+}
 
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message;

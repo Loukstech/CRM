@@ -24,7 +24,17 @@ describe('Row Level Security (PostgreSQL, rôle applicatif)', () => {
   let ownerB: Session;
   let invitationTokenB: string;
 
-  const TENANT_TABLES = ['roles', 'role_permissions', 'memberships', 'invitations', 'audit_logs'];
+  const TENANT_TABLES = [
+    'roles',
+    'role_permissions',
+    'memberships',
+    'invitations',
+    'audit_logs',
+    'companies',
+    'contacts',
+    'tags',
+    'contact_tags',
+  ];
 
   /** Exécute `fn` dans une transaction portant le contexte donné, puis annule tout. */
   async function withContext<T>(

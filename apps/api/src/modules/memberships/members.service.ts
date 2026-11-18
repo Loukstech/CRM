@@ -117,6 +117,20 @@ export class MembersService {
       await lockOrganization(tx, organizationId);
       const target = await this.findManageableMember(tx, auth, membershipId);
 
+      // Les fiches métier référencent le propriétaire par FK composite en
+      // RESTRICT (une FK composite ne peut pas porter SET NULL) : on les
+      // détache explicitement, sinon la suppression du membership échouerait.
+      const [contacts, companies] = await Promise.all([
+        tx.contact.updateMany({
+          where: { organizationId, ownerMembershipId: membershipId },
+          data: { ownerMembershipId: null },
+        }),
+        tx.company.updateMany({
+          where: { organizationId, ownerMembershipId: membershipId },
+          data: { ownerMembershipId: null },
+        }),
+      ]);
+
       await tx.membership.delete({ where: { id: membershipId } });
       await assertOwnerRemains(tx, organizationId);
 
@@ -126,7 +140,12 @@ export class MembersService {
         action: 'member.removed',
         entityType: 'membership',
         entityId: membershipId,
-        metadata: { userId: target.userId, roleId: target.role.id },
+        metadata: {
+          userId: target.userId,
+          roleId: target.role.id,
+          detachedContacts: contacts.count,
+          detachedCompanies: companies.count,
+        },
       });
     });
   }

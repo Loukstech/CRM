@@ -146,14 +146,80 @@ erDiagram
 | `permissions.key` sert de clé primaire (pas d'`id`) | La clé est l'identifiant stable utilisé par le code |
 | `role_permissions.scope` et `organization_id` ajoutés | Portées RBAC (§8.2) et RLS |
 | `roles.system_key` ajouté | Distinguer les rôles système non modifiables |
-| `teams`, `team_members`, `departments` absents | Créés en phase 2, quand la portée `TEAM`/`DEPARTMENT` s'appliquera à des ressources réelles |
+| `teams`, `team_members`, `departments` absents | Créés en phase 2.5, quand la portée `TEAM`/`DEPARTMENT` s'appliquera à des ressources réelles |
+
+## 2 bis. Phase 2.1 — implémenté ✅ (entreprises, contacts, étiquettes)
+
+```mermaid
+erDiagram
+  organizations ||--o{ companies : ""
+  organizations ||--o{ contacts : ""
+  organizations ||--o{ tags : ""
+  memberships |o--o{ companies : "propriétaire"
+  memberships |o--o{ contacts : "propriétaire"
+  companies |o--o{ contacts : "employeur"
+  contacts ||--o{ contact_tags : ""
+  tags ||--o{ contact_tags : ""
+
+  companies {
+    uuid id PK
+    uuid organization_id FK
+    varchar name
+    varchar domain
+    varchar industry
+    varchar country "ISO 3166-1 (CHECK)"
+    uuid owner_membership_id FK "FK composite, nullable"
+    timestamptz deleted_at "nullable — suppression logique"
+  }
+  contacts {
+    uuid id PK
+    uuid organization_id FK
+    varchar first_name
+    varchar last_name
+    varchar email "normalisé en minuscules (CHECK)"
+    uuid company_id FK "FK composite, nullable"
+    enum status "LEAD | PROSPECT | CUSTOMER | INACTIVE"
+    uuid owner_membership_id FK "FK composite, nullable"
+    timestamptz deleted_at "nullable — suppression logique"
+  }
+  tags {
+    uuid id PK
+    uuid organization_id FK
+    varchar name "unique par organisation, insensible à la casse"
+    varchar color "#rrggbb (CHECK)"
+  }
+  contact_tags {
+    uuid contact_id PK
+    uuid tag_id PK
+    uuid organization_id FK "FK composite vers les deux"
+  }
+```
+
+| Table | RLS | Droits de `crm_app` |
+| --- | --- | --- |
+| `companies`, `contacts`, `tags` | Oui (`ENABLE` + `FORCE`, policy `<table>_tenant`) | SELECT, INSERT, UPDATE, DELETE |
+| `contact_tags` | Oui | SELECT, INSERT, DELETE |
+
+Points de conception :
+
+- **Suppression logique** (`deleted_at`) : une fiche peut déjà être référencée par l'audit et, plus
+  tard, par une opportunité ou une facture. Les listes filtrent `deleted_at IS NULL`.
+- **Propriétaire = membership**, jamais un utilisateur global : un utilisateur peut appartenir à
+  plusieurs organisations, le propriétaire doit être ancré dans l'organisation active.
+- **`ON DELETE RESTRICT` sur le propriétaire** : une FK composite ne peut pas porter `SET NULL`
+  (`organization_id` est obligatoire). Le retrait d'un membre détache donc explicitement ses fiches
+  dans la même transaction (`members.service.ts`), et le nombre de fiches détachées est journalisé.
+- **Pas d'unicité d'e-mail** : deux contacts peuvent partager une adresse générique. La détection de
+  doublons (lot 2.4) avertira sans bloquer.
+- **Contraintes `CHECK`** : au moins un prénom ou un nom, e-mail normalisé, pays `^[A-Z]{2}$`,
+  couleur `^#[0-9a-f]{6}$`.
 
 ## 3. Cible — phases suivantes 🟡 (non implémenté)
 
 Toutes les tables ci-dessous portent `organization_id` (sauf mention « global ») et suivront les
 conventions du §1. Seules les relations structurantes sont montrées.
 
-### Phase 2 — Équipes, contacts, entreprises, leads
+### Phase 2 — Équipes, contacts, entreprises, leads (2.1 livré, voir §2 bis)
 
 ```mermaid
 erDiagram
