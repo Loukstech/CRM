@@ -116,8 +116,8 @@ export class InvitationsService {
       throw error;
     }
 
-    const url = new URL('/accept-invitation', this.config.APP_WEB_URL);
-    url.searchParams.set('token', token);
+    const url = new URL(this.config.APP_WEB_URL);
+    url.hash = `/accept-invitation?token=${encodeURIComponent(token)}`;
     try {
       await this.mailer.send({
         to: email,

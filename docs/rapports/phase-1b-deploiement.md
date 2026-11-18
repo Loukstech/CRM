@@ -320,12 +320,12 @@ supprimer l'ancien domaine de l'API (`cdm-dbrj6a61egvs739kjsh0`) avant de le dé
 
 **Piège SPA.** Un site statique Render ne réécrit pas les chemins inconnus vers `index.html` par
 défaut : `/verify-email?token=…` renvoyait donc `404` alors même que la page existait dans le
-bundle. Deux pistes ont été écartées après essai réel : un fichier `_redirects` (ignoré par Render)
-et le champ `serviceDetails.routes` de l'API de création (la règle `/* → /index.html` cassait la
-racine et les assets, `/* → /` laissait la racine en 404). La solution retenue est générique et ne
-dépend pas de la plateforme : le script `apps/web/scripts/copy-404.mjs` copie `dist/index.html` vers
-`dist/404.html` à chaque build. Le serveur statique sert donc l'application sur les chemins inconnus,
-et React Router prend le relais.
+bundle. Trois pistes ont été écartées après essai réel : un fichier `_redirects` (ignoré par Render),
+le champ `serviceDetails.routes` de l'API de création (la règle `/* → /index.html` cassait la racine
+et les assets, `/* → /` laissait la racine en 404), et un `404.html` généré à chaque build (Render ne
+le sert pas pour les chemins inconnus). La solution retenue est de porter le routage côté client dans
+le fragment : `HashRouter` côté front, et des liens d'e-mail construits en `APP_WEB_URL/#/route?token=…`
+côté API. Le navigateur ne demande alors que `/`, que le site statique sait servir.
 
 Le lien de vérification par e-mail est ainsi exploitable de bout en bout. Les secrets n'ont pas été
 touchés lors de cette migration.

@@ -92,9 +92,9 @@ services:
       - key: MAIL_FROM
         sync: false
 
-  # Interface web — SPA React/Vite. Le build génère dist/404.html comme copie de
-  # dist/index.html : les routes côté client (/verify-email?token=…) ne renvoient
-  # plus une page d'erreur vide même sans règle de réécriture côté plateforme.
+  # Interface web — SPA React/Vite. Le routage utilise le fragment (#) pour
+  # fonctionner sur un hébergeur statique sans règle de réécriture :
+  # /#/verify-email?token=… ne sollicite que la racine du site.
   - type: web
     name: louks-crm-web
     runtime: static

@@ -93,10 +93,10 @@ inchangé. Le front se construit séparément.
 Le compte créé lors de la phase 1b fonctionne : **`contact@timestradinginter.com`**. Son mot de
 passe provisoire a été communiqué hors du dépôt et n'est volontairement pas consigné ici.
 `emailVerified` est encore à `false` : le lien de vérification envoyé par e-mail pointe désormais sur
-`/verify-email?token=…`, une route **implémentée dans cette application** (elle répondait 404 avant).
-Le build génère `dist/404.html` comme copie de `dist/index.html`, afin que les routes côté client
-restent exploitables même si l'hébergeur ne réécrit pas les chemins inconnus. Ce mot de passe est
-provisoire et sera à changer dès que l'interface sera ouverte.
+`/#/verify-email?token=…`, une route **implémentée dans cette application** (elle répondait 404 avant).
+Le routage passe par le fragment (`HashRouter`) : l'hébergeur statique ne reçoit que la racine du
+site, quelle que soit la page affichée. Ce mot de passe est provisoire et sera à changer dès que
+l'interface sera ouverte.
 
 ## 6. Déploiement en ligne
 

@@ -381,9 +381,13 @@ export class AuthService {
     });
   }
 
+  /**
+   * L'interface est une SPA servie par un hébergeur statique qui ne réécrit pas
+   * les chemins inconnus : les routes sont donc portées par le fragment (#).
+   */
   private webUrl(path: string, token: string): string {
-    const url = new URL(path, this.config.APP_WEB_URL);
-    url.searchParams.set('token', token);
+    const url = new URL(this.config.APP_WEB_URL);
+    url.hash = `${path}?token=${encodeURIComponent(token)}`;
     return url.toString();
   }
 
