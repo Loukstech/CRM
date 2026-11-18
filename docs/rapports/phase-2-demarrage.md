@@ -180,3 +180,22 @@ sous 620 px a été corrigé (`min-width: 0` sur les enfants de `.content`, en-t
 4. **Les notes sont un champ texte**, pas encore un fil d'annotations horodatées.
 5. **Pas de tests Jest exécutables sur ce poste** : la couverture est assurée par les scripts de
    vérification décrits ci-dessus, à rejouer dès que Node ≥ 24.9 sera disponible en CI.
+
+## 5. Mise en ligne et vérification en production
+
+| Élément | État |
+| --- | --- |
+| Commit | `3bdada2` sur `workbuddy/main-7e0d91fb` |
+| Déploiement API (`crm-api`) | `live` — migration `20261118120000_contacts_companies_tags` appliquée à 18:57:45 UTC |
+| Déploiement interface (`louks-crm-web`) | `live` |
+| Base Neon | 4 tables créées, RLS `ENABLE` + `FORCE`, 1 policy par table, `GRANT` conformes |
+| Catalogue | 7 permissions présentes ; accordées à `owner` et `admin` (7) et à `member` (5) pour chaque organisation existante |
+| `GET /api/v1/contacts` sans jeton | `401 UNAUTHENTICATED` — la route existe et refuse l'anonyme |
+
+Parcours vérifié dans un navigateur réel sur <https://crm.timestradinginter.com> : connexion,
+ouverture de « Contacts » (état vide), création d'un contact, ouverture de « Entreprises ». Aucune
+erreur console.
+
+Un compte de vérification a été créé en production pour ce contrôle :
+`verif-prod-1795028392@timestradinginter.com`, organisation « Vérif prod 1795028392 », avec un
+contact de test. Il peut être supprimé sans conséquence.
