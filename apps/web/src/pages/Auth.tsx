@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Check, MailCheck } from 'lucide-react';
 import { api, errorMessage } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { Button, Field, Input, Select } from '../components/ui';
+import { Button, Field, Input, PasswordInput, Select } from '../components/ui';
 import '../styles/auth.css';
 
 function AuthLayout({
@@ -103,9 +103,8 @@ export function LoginPage() {
           />
         </Field>
         <Field label="Mot de passe" htmlFor="password">
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             required
             placeholder="Votre mot de passe"
@@ -190,9 +189,8 @@ export function RegisterPage() {
           />
         </Field>
         <Field label="Mot de passe" htmlFor="reg-password" hint="Au moins 12 caractères.">
-          <Input
+          <PasswordInput
             id="reg-password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={12}
@@ -205,9 +203,8 @@ export function RegisterPage() {
           htmlFor="reg-confirm-password"
           hint="Retapez exactement le même mot de passe."
         >
-          <Input
+          <PasswordInput
             id="reg-confirm-password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={12}
@@ -400,9 +397,8 @@ export function ResetPasswordPage() {
           </div>
         ) : null}
         <Field label="Nouveau mot de passe" htmlFor="reset-password" hint="Au moins 12 caractères.">
-          <Input
+          <PasswordInput
             id="reset-password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={12}
@@ -411,9 +407,8 @@ export function ResetPasswordPage() {
           />
         </Field>
         <Field label="Confirmer" htmlFor="reset-confirm">
-          <Input
+          <PasswordInput
             id="reset-confirm"
-            type="password"
             autoComplete="new-password"
             required
             minLength={12}

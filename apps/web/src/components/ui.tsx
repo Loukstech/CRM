@@ -11,7 +11,7 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
-import { Check, LoaderCircle, X } from 'lucide-react';
+import { Check, Eye, EyeOff, LoaderCircle, X } from 'lucide-react';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -76,6 +76,31 @@ export function Field({
 
 export function Input({ className = '', ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={`input ${className}`} {...rest} />;
+}
+
+/** Champ de mot de passe avec bascule d'affichage, accessible au clavier et aux lecteurs d'écran. */
+export function PasswordInput({
+  className = '',
+  ...rest
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const [visible, setVisible] = useState(false);
+  const label = visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe';
+
+  return (
+    <div className={`password-input ${className}`}>
+      <input className="input password-input__field" type={visible ? 'text' : 'password'} {...rest} />
+      <button
+        type="button"
+        className="password-input__toggle"
+        onClick={() => setVisible((current) => !current)}
+        aria-label={label}
+        aria-pressed={visible}
+        title={label}
+      >
+        {visible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+      </button>
+    </div>
+  );
 }
 
 export function Select({ className = '', children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {

@@ -41,7 +41,9 @@ Quelques décisions structurantes :
 - rayons de 6 à 10 px, bordures 1 px, pas d'ombre par défaut — pas de « kit de cartes » générique ;
 - une barre laiton verticale sur l'élément de navigation actif ;
 - mouvement minimal : entrée de page unique, transitions à 160 ms, `prefers-reduced-motion` respecté ;
-- focus clavier visible partout, cibles tactiles ≥ 34 px, sans emoji comme icônes (Lucide SVG).
+- focus clavier visible partout, cibles tactiles ≥ 34 px, sans emoji comme icônes (Lucide SVG) ;
+- chaque champ de mot de passe possède une bascule « afficher / masquer » (`Eye` / `EyeOff`),
+  annoncée aux lecteurs d'écran via `aria-label` et `aria-pressed`.
 
 L'interface est responsive : rail fixe au-delà de 980 px, tiroir avec bouton menu en dessous.
 
