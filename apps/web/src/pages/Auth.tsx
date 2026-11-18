@@ -423,3 +423,190 @@ export function ResetPasswordPage() {
     </AuthLayout>
   );
 }
+
+export function AcceptInvitationPage() {
+  const [params] = useSearchParams();
+  const token = params.get('token') ?? '';
+  const { status, signIn, refresh, switchOrganization } = useAuth();
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [form, setForm] = useState({
+    email: '',
+    name: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+  const set = (key: keyof typeof form, value: string) =>
+    setForm((current) => ({ ...current, [key]: value }));
+
+  useEffect(() => {
+    if (!token) {
+      setPhase('error');
+      setMessage('Ce lien ne contient pas de jeton d’invitation.');
+    }
+  }, [token]);
+
+  async function finish(organizationId?: string) {
+    if (organizationId) await switchOrganization(organizationId);
+    else await refresh();
+    setPhase('done');
+    setMessage('Vous avez rejoint l’organisation. Elle est maintenant active.');
+  }
+
+  async function acceptAuthenticated() {
+    setPhase('loading');
+    setMessage('');
+    try {
+      const result = await api.acceptInvitation(token);
+      await finish(result.organizationId);
+    } catch (cause) {
+      setPhase('error');
+      setMessage(errorMessage(cause));
+    }
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setPhase('loading');
+    setMessage('');
+    try {
+      if (mode === 'login') {
+        const session = await api.login(form.email, form.password);
+        await signIn(session);
+        const result = await api.acceptInvitation(token);
+        await finish(result.organizationId);
+      } else {
+        if (form.password !== form.confirmPassword) {
+          throw new Error('Les mots de passe ne correspondent pas.');
+        }
+        const session = await api.acceptInvitationSignup({
+          token,
+          name: form.name,
+          password: form.password,
+        });
+        await signIn(session);
+        await finish();
+      }
+    } catch (cause) {
+      setPhase('error');
+      setMessage(errorMessage(cause));
+    }
+  }
+
+  if (phase === 'done') {
+    return (
+      <AuthLayout
+        title="C'est prêt."
+        subtitle="Votre invitation a été acceptée."
+        foot={
+          <>
+            <Link to="/">Aller à l’espace de travail</Link>
+          </>
+        }
+      >
+        <div className="auth__alert" role="status">
+          {message}
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  return (
+    <AuthLayout
+      title="Rejoindre l'organisation"
+      subtitle="Acceptez l’invitation pour accéder à l’espace partagé."
+    >
+      {phase === 'error' ? (
+        <div className="auth__alert" role="alert">
+          {message || 'Ce lien d’invitation est invalide.'}
+        </div>
+      ) : null}
+      {status === 'authenticated' ? (
+        <div className="auth__form">
+          <p className="muted">
+            Vous êtes connecté. Confirmez pour rejoindre l’organisation associée à cette invitation.
+          </p>
+          <Button
+            type="button"
+            full
+            loading={phase === 'loading'}
+            icon={<Check size={16} />}
+            onClick={acceptAuthenticated}
+          >
+            Accepter l’invitation
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="auth__links">
+            <Button
+              type="button"
+              variant={mode === 'login' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setMode('login')}
+            >
+              J’ai déjà un compte
+            </Button>
+            <Button
+              type="button"
+              variant={mode === 'signup' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setMode('signup')}
+            >
+              Créer un compte
+            </Button>
+          </div>
+          <form className="auth__form" onSubmit={submit}>
+            {mode === 'signup' ? (
+              <Field label="Votre nom" htmlFor="invite-name">
+                <Input
+                  id="invite-name"
+                  required
+                  value={form.name}
+                  onChange={(event) => set('name', event.target.value)}
+                />
+              </Field>
+            ) : (
+              <Field label="Adresse e-mail" htmlFor="invite-email">
+                <Input
+                  id="invite-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={form.email}
+                  onChange={(event) => set('email', event.target.value)}
+                />
+              </Field>
+            )}
+            <Field label="Mot de passe" htmlFor="invite-password" hint="Au moins 12 caractères.">
+              <PasswordInput
+                id="invite-password"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                required
+                minLength={12}
+                value={form.password}
+                onChange={(event) => set('password', event.target.value)}
+              />
+            </Field>
+            {mode === 'signup' ? (
+              <Field label="Confirmer le mot de passe" htmlFor="invite-confirm">
+                <PasswordInput
+                  id="invite-confirm"
+                  autoComplete="new-password"
+                  required
+                  minLength={12}
+                  value={form.confirmPassword}
+                  onChange={(event) => set('confirmPassword', event.target.value)}
+                />
+              </Field>
+            ) : null}
+            <Button type="submit" full loading={phase === 'loading'} icon={<ArrowRight size={16} />}>
+              {mode === 'login' ? 'Se connecter et accepter' : 'Créer mon compte et accepter'}
+            </Button>
+          </form>
+        </>
+      )}
+    </AuthLayout>
+  );
+}

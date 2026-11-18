@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './lib/auth';
 import { ToastProvider } from './components/ui';
 import { Shell } from './components/Shell';
 import {
+  AcceptInvitationPage,
   ForgotPasswordPage,
   LoginPage,
   RegisterPage,
@@ -67,6 +68,7 @@ export default function App() {
               }
             />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route element={<Protected />}>

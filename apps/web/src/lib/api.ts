@@ -213,6 +213,13 @@ export const api = {
   createInvitation: (data: { email: string; roleId?: string }) =>
     apiFetch<Invitation>('/invitations', body(data)),
   revokeInvitation: (id: string) => apiFetch<void>(`/invitations/${id}`, { method: 'DELETE' }),
+  acceptInvitation: (token: string) =>
+    apiFetch<{ organizationId: string }>('/invitations/accept', body({ token })),
+  acceptInvitationSignup: async (data: { token: string; name: string; password: string }) => {
+    const session = await apiFetch<Session>('/invitations/accept-signup', body(data));
+    tokenStore.write(session.tokens);
+    return session;
+  },
 
   listRoles: () => apiFetch<Role[]>('/roles'),
   listPermissions: () => apiFetch<PermissionInfo[]>('/permissions'),

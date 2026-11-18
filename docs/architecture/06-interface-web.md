@@ -9,7 +9,8 @@ socle multi-tenant déjà livré :
   vérification d'adresse, mot de passe oublié et réinitialisation ;
 - vue d'ensemble (effectifs, rôles, invitations, activité récente) ;
 - équipe (liste, changement de rôle, retrait, invitation) ;
-- invitations en attente ;
+- invitations en attente et page d'acceptation (`/#/accept-invitation?token=…`, avec connexion
+  ou création de compte) ;
 - rôles et catalogue des permissions ;
 - journal d'activité ;
 - profil de l'organisation active et changement d'organisation.
@@ -109,7 +110,22 @@ l'interface sera ouverte.
 | `https://api-crm.timestradinginter.com/api/v1` | API (Render Web Service `srv-dbrj68e7bikc73fu2sfg`) |
 | `https://api-crm.timestradinginter.com/api/docs` | Swagger, laissé actif pendant le développement |
 
-## 7. Ce qui reste
+## 7. Gestion des organisations
+
+Les données sont isolées par organisation (RLS). Le sélecteur en haut à droite affiche
+l'organisation active et permet de basculer vers celles dont l'utilisateur est membre. La page
+« Organisation » édite l'identité et les préférences de l'organisation active : nom, pays, devise,
+fuseau horaire et langue — sous réserve de la permission `organization.update`.
+
+Les écrans « Équipe », « Invitations » et « Rôles & accès » portent uniquement sur l'organisation
+active. Une invitation crée un membre avec le rôle choisi dès que son destinataire accepte le lien ;
+le statut passe alors de `PENDING` à `ACCEPTED`.
+
+La **création d'une organisation supplémentaire** existe côté API (`POST /organizations`) mais n'a
+pas encore d'écran dédié : pour l'instant, la première organisation est créée à l'inscription, et
+les suivantes s'obtiennent par invitation.
+
+## 8. Ce qui reste
 
 - Éteindre Swagger (`SWAGGER_ENABLED=0`) **uniquement en fin de développement**, en même temps que la
   rotation des secrets : il reste volontairement actif pour servir d'interface de test.
