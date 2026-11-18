@@ -4,9 +4,11 @@ coverage/
 *.tsbuildinfo
 
 # Secrets et configuration locale — ne jamais versionner
+# Les gabarits `*.example` ne contiennent aucun secret : ils sont versionnés.
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Données locales (PostgreSQL embarqué de développement)
 .data/
