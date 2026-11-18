@@ -20,3 +20,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Snapshots de navigation
+.playwright-cli/

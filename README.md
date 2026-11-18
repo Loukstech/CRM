@@ -3,17 +3,19 @@
 Monorepo de la plateforme CRM décrite dans le
 [cahier des charges](cahier_des_charges_CRM_SaaS.md).
 
-**État : phases 1a et 1b terminées — socle technique en ligne.** L'API gère l'authentification, les
-organisations, les membres, les rôles et l'audit, avec une isolation multi-tenant testée. Elle est
-déployée sur <https://crm.timestradinginter.com> (Render + Neon). **Aucun module CRM (contacts,
-ventes, facturation…) n'existe encore**, ni application web, ni application mobile.
+**État : phases 1a et 1b terminées — socle technique en ligne et interface web construite.** L'API
+gère l'authentification, les organisations, les membres, les rôles et l'audit, avec une isolation
+multi-tenant testée. Elle est déployée sur <https://crm.timestradinginter.com> (Render + Neon).
+Une application React consomme cette API en local (`npm run dev:web`). **Aucun module CRM (contacts,
+ventes, facturation…) n'existe encore**, ni application mobile.
 
 ## Ce qui fonctionne / ce qui n'existe pas
 
 | Fonctionne (implémenté et testé) | N'existe pas encore |
 | --- | --- |
-| Inscription, connexion, déconnexion, rotation des jetons | Application web et mobile |
-| Vérification d'e-mail et réinitialisation du mot de passe (jetons) | **Interface web** : les e-mails partent réellement (Brevo, domaine authentifié), mais leurs liens renvoient 404 tant qu'il n'y a pas de front |
+| Inscription, connexion, déconnexion, rotation des jetons | Application mobile |
+| **Interface web React** : auth, équipe, invitations, rôles, audit, organisation | Modules CRM métier (contacts, ventes, facturation) |
+| Vérification d'e-mail et réinitialisation du mot de passe, avec pages dédiées dans le front | Déploiement du front : l'API occupe encore `crm.timestradinginter.com` |
 | Organisations, multi-appartenance, changement d'organisation active | MFA, OAuth social |
 | Invitations de membres, rôles système et personnalisés, permissions | Portées `OWN` / `TEAM` / `DEPARTMENT` appliquées à des données (phase 2) |
 | Isolation tenant : contexte serveur, filtres, Row Level Security, FK composites | Redis, files d'attente, workers, temps réel, stockage de fichiers |
@@ -36,11 +38,14 @@ npm run db:generate  # client Prisma
 npm run db:start     # terminal 1 : PostgreSQL local + migrations (laisser ouvert)
 npm run db:seed      # optionnel : compte de démonstration, mot de passe affiché une fois
 npm run dev:api      # terminal 2 : API en mode rechargement
+npm run dev:web      # terminal 3 : interface web
 ```
 
 - API : <http://localhost:3000/api/v1>
 - Documentation interactive : <http://localhost:3000/api/docs>
 - Santé : <http://localhost:3000/api/v1/health/ready>
+- Interface web : <http://localhost:5173> — son proxy `/api` pointe vers l'API **en ligne**, donc pas
+  besoin de démarrer l'API locale pour l'utiliser. Voir [06-interface-web](docs/architecture/06-interface-web.md).
 
 Pour tester les parcours par e-mail en local, le lien (et son jeton) apparaît dans la console de
 l'API sur une ligne `[E-MAIL NON ENVOYÉ — pilote "log"]`. Trois pilotes existent pour l'envoi réel
@@ -55,6 +60,7 @@ HTTPS Brevo/Resend). **Sur une instance Free de Render, `smtp` ne peut pas fonct
 | `npm test` | Suite complète sur un PostgreSQL jetable (`npm test -- rbac` pour filtrer) |
 | `npm run lint` · `npm run typecheck` · `npm run format` | Qualité |
 | `npm run build` · `npm run start:api` | Compilation puis exécution de l'API compilée |
+| `npm run build:web` · `npm run typecheck:web` | Vérification et bundle de l'interface dans `apps/web/dist` |
 | `npm run db:start` · `npm run db:stop` | Base de développement (données dans `.data/`) |
 | `npm run db:migrate` | Applique les migrations et synchronise le catalogue de permissions (base déjà démarrée) |
 | `npm run db:seed` | Compte de démonstration (refusé en production) |
@@ -106,6 +112,7 @@ connues : [rapport de phase 1b](docs/rapports/phase-1b-deploiement.md).
 
 ```text
 apps/api/        API NestJS (src/ : config, database, common, modules ; test/)
+apps/web/        Interface React + Vite (src/ : lib, components, pages, styles)
 prisma/          schéma, migrations SQL (dont RLS), synchronisation des permissions
 scripts/         base locale embarquée, lanceur de tests, génération du .env
 docs/            architecture, décisions (ADR), rapports de phase
@@ -120,6 +127,7 @@ docs/            architecture, décisions (ADR), rapports de phase
 | [03 — Modèle de données](docs/architecture/03-modele-de-donnees-erd.md) | ERD de la phase 1 (exact) et cible par domaine |
 | [04 — Multi-tenant et RBAC](docs/architecture/04-multi-tenant-et-rbac.md) | Barrières d'isolation, policies, permissions, authentification |
 | [05 — Plan](docs/architecture/05-plan-implementation.md) | Phases, Definition of Done, décisions attendues |
+| [06 — Interface web](docs/architecture/06-interface-web.md) | Identité visuelle, stack, écrans, développement, ce qui reste |
 | [Décisions](docs/decisions/) | ADR-0001 à 0007 (hébergement, isolation, authentification, e-mails) |
 | [Rapport de phase 1a](docs/rapports/phase-1a-fondations.md) | Socle technique : ce qui a été fait, vérifié, et ce qui reste |
 | [Rapport de phase 1b](docs/rapports/phase-1b-deploiement.md) | Premier déploiement : topologie, DNS, RLS en production, e-mails, reste à faire |

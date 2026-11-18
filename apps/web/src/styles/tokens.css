@@ -1,0 +1,81 @@
+/*
+ * Couche 1 — valeurs primitives.
+ * identities: encre verte + papier chaud + laiton.
+ */
+:root {
+  --ink-950: #0e1815;
+  --ink-900: #13201c;
+  --ink-800: #1d302a;
+  --ink-700: #2b443b;
+  --ink-500: #4b6058;
+
+  --paper-50: #fbfaf7;
+  --paper-100: #f6f4ef;
+  --paper-200: #edeae1;
+  --paper-300: #dedbd1;
+
+  --brass-100: #f2e9d9;
+  --brass-400: #c09a5c;
+  --brass-500: #a8792e;
+  --brass-600: #906523;
+  --brass-700: #72501b;
+
+  --sage-600: #1f7a55;
+  --sage-100: #dff0e8;
+  --rust-600: #b4362e;
+  --rust-100: #f7e4e1;
+
+  --white: #ffffff;
+
+  --font-ui: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Newsreader', ui-serif, Georgia, serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-full: 999px;
+
+  --duration: 160ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Couche 2 — alias sémantiques. */
+:root {
+  --bg: var(--paper-100);
+  --surface: var(--white);
+  --surface-muted: var(--paper-50);
+  --surface-rail: var(--ink-900);
+
+  --text: var(--ink-900);
+  --text-soft: var(--ink-500);
+  --text-faint: #7a867f;
+  --text-on-rail: #e8ede9;
+  --text-on-rail-soft: #94a39b;
+
+  --border: var(--paper-300);
+  --border-strong: #cdc9bd;
+  --border-rail: rgba(255, 255, 255, 0.09);
+
+  --accent: var(--brass-600);
+  --accent-hover: var(--brass-700);
+  --accent-soft: var(--brass-100);
+  --accent-on: var(--white);
+
+  --success: var(--sage-600);
+  --success-soft: var(--sage-100);
+  --danger: var(--rust-600);
+  --danger-soft: var(--rust-100);
+
+  --ring: rgba(168, 121, 46, 0.35);
+  --shadow-lift: 0 10px 30px -18px rgba(14, 24, 21, 0.35);
+  --shadow-pop: 0 24px 60px -24px rgba(14, 24, 21, 0.45);
+}
