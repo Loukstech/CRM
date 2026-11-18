@@ -26,3 +26,6 @@ Thumbs.db
 
 # Captures de vérification locale
 /shots/
+
+# Notes et etat de travail de l assistant (jamais versionne)
+.workbuddy-ai/
